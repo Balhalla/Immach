@@ -1791,6 +1791,7 @@
   "remove_memory": "Remove memory",
   "remove_photo_from_memory": "Remove photo from this memory",
   "remove_tag": "Remove tag",
+  "remove_tags": "Remove tags",
   "remove_user": "Remove user",
   "removed_api_key": "Removed API Key: {name}",
   "removed_from_archive": "Removed from archive",
