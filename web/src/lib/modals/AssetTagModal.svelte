@@ -33,7 +33,7 @@
     }
 
     const updatedIds = await tagAssets({ tagIds: [...selectedIds], assetIds, showNotification: false });
-    eventManager.emit('AssetsTag', updatedIds);
+    eventManager.emit('AssetsTag', updatedIds, { tagIds: [...selectedIds], mode: 'add' });
     onClose(true);
   };
 

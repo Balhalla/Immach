@@ -2,6 +2,7 @@
   import HeaderActionButton from '$lib/components/HeaderActionButton.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { eventManager } from '$lib/managers/event-manager.svelte';
   import { Route } from '$lib/route';
   import { getAssetActions } from '$lib/services/asset.service';
   import { removeTag } from '$lib/utils/asset-utils';
@@ -21,6 +22,7 @@
   const handleRemove = async (tagId: string) => {
     const ids = await removeTag({ tagIds: [tagId], assetIds: [asset.id], showNotification: false });
     if (ids) {
+      eventManager.emit('AssetsTag', ids, { tagIds: [tagId], mode: 'remove' });
       asset = await getAssetInfo({ id: asset.id });
     }
   };

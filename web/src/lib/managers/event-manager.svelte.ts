@@ -20,6 +20,8 @@ import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import { BaseEventManager } from '$lib/utils/base-event-manager.svelte';
 import type { TreeNode } from '$lib/utils/tree-utils';
 
+export type AssetsTagChange = { tagIds: string[]; mode: 'add' | 'remove' };
+
 export type Events = {
   AppInit: [];
   AppNavigate: [];
@@ -40,7 +42,7 @@ export type Events = {
   AssetsUndoArchive: [TimelineAsset[]];
   AssetsDelete: [string[]];
   AssetEditsApplied: [string];
-  AssetsTag: [string[]];
+  AssetsTag: [string[], AssetsTagChange?];
 
   AlbumAddAssets: [{ assetIds: string[]; albumIds: string[] }];
   AlbumCreate: [AlbumResponseDto];
