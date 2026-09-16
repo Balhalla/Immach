@@ -426,6 +426,22 @@ describe(MetadataService.name, () => {
       expect(mocks.tag.upsertValue).toHaveBeenCalledWith({ userId: asset.ownerId, value: 'Parent', parent: undefined });
     });
 
+    it('should not sync tags after a sidecar write', async () => {
+      const asset = AssetFactory.create();
+      mocks.assetJob.getForMetadataExtraction.mockResolvedValue(getForMetadataExtraction(asset));
+      mockReadTags({ TagsList: ['Parent'] });
+
+      await sut.handleMetadataExtraction({ id: asset.id, source: 'sidecar-write' });
+
+      expect(mocks.asset.getForMetadataExtractionTags).not.toHaveBeenCalled();
+      expect(mocks.asset.upsertExif).toHaveBeenCalledWith(
+        expect.objectContaining({
+          exif: expect.not.objectContaining({ tags: expect.anything() }),
+          lockedPropertiesBehavior: 'skip',
+        }),
+      );
+    });
+
     it('should extract hierarchy from TagsList', async () => {
       const asset = AssetFactory.create();
       mocks.assetJob.getForMetadataExtraction.mockResolvedValue(getForMetadataExtraction(asset));
@@ -2044,6 +2060,48 @@ describe(MetadataService.name, () => {
       await expect(sut.handleSidecarWrite({ id: asset.id })).resolves.toBe(JobStatus.Success);
       expect(mocks.metadata.writeTags).toHaveBeenCalledWith(asset.files[0].path, { Rating: 0 });
       expect(mocks.asset.unlockProperties).toHaveBeenCalledWith(asset.id, ['rating']);
+    });
+
+    it('should keep tags locked after writing', async () => {
+      const asset = AssetFactory.from().file({ type: AssetFileType.Sidecar }).exif().build();
+      asset.exifInfo.tags = ['Parent'];
+
+      mocks.assetJob.getLockedPropertiesForMetadataExtraction.mockResolvedValue(['tags', 'rating']);
+      mocks.assetJob.getForSidecarWriteJob.mockResolvedValue(getForSidecarWrite(asset));
+      await expect(sut.handleSidecarWrite({ id: asset.id })).resolves.toBe(JobStatus.Success);
+      expect(mocks.metadata.writeTags).toHaveBeenCalledWith(asset.files[0].path, { TagsList: ['Parent'], Rating: 4 });
+      expect(mocks.asset.unlockProperties).toHaveBeenCalledWith(asset.id, ['rating']);
+    });
+
+    it('should serialize concurrent writes for the same asset', async () => {
+      const asset = AssetFactory.from().file({ type: AssetFileType.Sidecar }).exif().build();
+      asset.exifInfo.rating = 4;
+
+      mocks.assetJob.getLockedPropertiesForMetadataExtraction.mockResolvedValue(['rating']);
+      mocks.assetJob.getForSidecarWriteJob.mockResolvedValue(getForSidecarWrite(asset));
+
+      let release = () => {};
+      const gate = new Promise<void>((resolve) => (release = resolve));
+      const calls: string[] = [];
+      mocks.metadata.writeTags.mockImplementationOnce(async () => {
+        calls.push('first:start');
+        await gate;
+        calls.push('first:end');
+      });
+      mocks.metadata.writeTags.mockImplementationOnce(async () => {
+        calls.push('second');
+      });
+
+      const first = sut.handleSidecarWrite({ id: asset.id });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      const second = sut.handleSidecarWrite({ id: asset.id });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(calls).toEqual(['first:start']);
+      release();
+      await Promise.all([first, second]);
+      expect(calls).toEqual(['first:start', 'first:end', 'second']);
+      expect(mocks.metadata.writeTags).toHaveBeenCalledTimes(2);
     });
   });
 

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import AsyncLock from 'async-lock';
 import { ContainerDirectoryItem, ExifDateTime, Tags } from 'exiftool-vendored';
 import { Insertable } from 'kysely';
 import _ from 'lodash';
@@ -138,6 +139,8 @@ type Dates = {
 
 @Injectable()
 export class MetadataService extends BaseService {
+  private readonly sidecarWriteLock = new AsyncLock();
+
   @OnEvent({ name: 'AppBootstrap', workers: [ImmichWorker.Microservices] })
   async onBootstrap() {
     this.logger.log('Bootstrapping metadata service');
@@ -309,6 +312,11 @@ export class MetadataService extends BaseService {
       tags: tags.length > 0 ? tags : null,
     };
 
+    if (data.source === 'sidecar-write') {
+      // Tags were just written from the database; never re-import them from the sidecar here.
+      delete exifData.tags;
+    }
+
     const audioData =
       format && audio?.codecName
         ? {
@@ -383,7 +391,9 @@ export class MetadataService extends BaseService {
           keyframes: keyframeData,
           lockedPropertiesBehavior: 'skip',
         });
-        await this.applyTagList(asset);
+        if (data.source !== 'sidecar-write') {
+          await this.applyTagList(asset);
+        }
       },
     );
 
@@ -473,8 +483,12 @@ export class MetadataService extends BaseService {
   }
 
   @OnJob({ name: JobName.SidecarWrite, queue: QueueName.Sidecar })
-  async handleSidecarWrite(job: JobOf<JobName.SidecarWrite>): Promise<JobStatus> {
+  handleSidecarWrite(job: JobOf<JobName.SidecarWrite>): Promise<JobStatus> {
     const { id } = job;
+    return this.sidecarWriteLock.acquire(id, () => this.writeSidecar(id));
+  }
+
+  private async writeSidecar(id: string): Promise<JobStatus> {
     const asset = await this.assetJobRepository.getForSidecarWriteJob(id);
     if (!asset) {
       return JobStatus.Failed;
@@ -521,7 +535,12 @@ export class MetadataService extends BaseService {
       await this.assetRepository.upsertFile({ assetId: id, type: AssetFileType.Sidecar, path: sidecarPath });
     }
 
-    await this.assetRepository.unlockProperties(asset.id, lockedProperties);
+    // Tags stay locked: they are owned by the database, and unlocking them would make serialized
+    // follow-up writes for the same asset skip (no locked properties) and leave a stale sidecar.
+    await this.assetRepository.unlockProperties(
+      asset.id,
+      lockedProperties.filter((property) => property !== 'tags'),
+    );
 
     return JobStatus.Success;
   }
