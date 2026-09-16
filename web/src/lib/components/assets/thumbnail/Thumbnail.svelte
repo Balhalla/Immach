@@ -1,9 +1,10 @@
 <script lang="ts">
   import { ProjectionType } from '$lib/constants';
   import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { tagBadgeManager } from '$lib/managers/tag-badge-manager.svelte';
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { locale, playVideoThumbnailOnHover } from '$lib/stores/preferences.store';
+  import { locale, playVideoThumbnailOnHover, showTagBadges } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
   import { moveFocus } from '$lib/utils/focus-util';
   import { currentUrlReplaceAssetId } from '$lib/utils/navigation';
@@ -26,6 +27,7 @@
   import { fade } from 'svelte/transition';
   import Thumbhash from '$lib/components/Thumbhash.svelte';
   import ImageThumbnail from './ImageThumbnail.svelte';
+  import TagBadges from './TagBadges.svelte';
   import VideoThumbnail from './VideoThumbnail.svelte';
   interface Props {
     asset: TimelineAsset;
@@ -40,6 +42,7 @@
     readonly?: boolean;
     showArchiveIcon?: boolean;
     showStackedIcon?: boolean;
+    tagBadges?: boolean;
     imageClass?: ClassValue;
     brokenAssetClass?: ClassValue;
     dimmed?: boolean;
@@ -63,6 +66,7 @@
     readonly = false,
     showArchiveIcon = false,
     showStackedIcon = true,
+    tagBadges = false,
     albumUsers = [],
     onClick = undefined,
     onPreview = undefined,
@@ -84,6 +88,10 @@
   let height = $derived(thumbnailSize || thumbnailHeight || 235);
 
   let assetOwner = $derived(albumUsers?.find((user) => user.id === asset.ownerId) ?? null);
+
+  let tagsVisible = $derived(
+    tagBadges && $showTagBadges && width >= 110 && height >= 72 && tagBadgeManager.hasTags(asset.id),
+  );
 
   const onIconClickedHandler = (e?: MouseEvent) => {
     e?.stopPropagation();
@@ -334,13 +342,13 @@
 
         <!-- Favorite asset star -->
         {#if !authManager.isSharedLink && asset.isFavorite}
-          <div class="absolute inset-s-2 bottom-2 z-2">
+          <div class={['absolute inset-s-2 z-2', tagsVisible ? 'bottom-7' : 'bottom-2']}>
             <Icon data-icon-favorite icon={mdiHeart} size="24" class="text-white" />
           </div>
         {/if}
 
         {#if !!assetOwner}
-          <div class="absolute inset-e-2 bottom-1 z-2 max-w-[50%]">
+          <div class={['absolute inset-e-2 z-2 max-w-[50%]', tagsVisible ? 'bottom-6' : 'bottom-1']}>
             <p class="text-white-shadow max-w-full truncate p-1 text-xs font-medium text-white">
               {assetOwner.name}
             </p>
@@ -348,7 +356,12 @@
         {/if}
 
         {#if !authManager.isSharedLink && showArchiveIcon && asset.visibility === AssetVisibility.Archive}
-          <div class={['absolute inset-s-2 z-2', asset.isFavorite ? 'bottom-10' : 'bottom-2']}>
+          <div
+            class={[
+              'absolute inset-s-2 z-2',
+              asset.isFavorite ? (tagsVisible ? 'bottom-14' : 'bottom-10') : tagsVisible ? 'bottom-7' : 'bottom-2',
+            ]}
+          >
             <Icon data-icon-archive icon={mdiArchiveArrowDownOutline} size="24" class="text-white" />
           </div>
         {/if}
@@ -384,6 +397,8 @@
           </div>
         {/if}
       </div>
+
+      <TagBadges assetId={asset.id} />
 
       <!-- lazy show the url on mouse over-->
       {#if !usingMobileDevice && mouseOver && !disableLinkMouseOver}
@@ -439,7 +454,10 @@
           e.preventDefault();
           onPreview?.($state.snapshot(asset));
         }}
-        class="absolute inset-e-1 bottom-1 z-2 rounded-full bg-black/25 p-1.5 transition-colors hover:bg-black/50 focus:outline-none"
+        class={[
+          'absolute inset-e-1 z-2 rounded-full bg-black/25 p-1.5 transition-colors hover:bg-black/50 focus:outline-none',
+          tagsVisible ? 'bottom-6' : 'bottom-1',
+        ]}
         in:fade={{ duration: 100 }}
         tabindex={-1}
         aria-label="Preview asset"

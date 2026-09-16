@@ -2136,6 +2136,8 @@
   "system_theme_command_description": "Use the system theme ({value})",
   "tag": "Tag",
   "tag_assets": "Tag assets",
+  "tag_badges_hide": "Hide tag badges",
+  "tag_badges_show": "Show tag badges",
   "tag_created": "Created tag: {tag}",
   "tag_face": "Tag face",
   "tag_feature_description": "Browsing photos and videos grouped by logical tag topics",

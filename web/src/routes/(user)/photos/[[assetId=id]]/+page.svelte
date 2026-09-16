@@ -104,6 +104,7 @@
     removeAction={AssetAction.ARCHIVE}
     onEscape={handleEscape}
     withStacked
+    tagBadgeToggle
   >
     {#if authManager.preferences.memories.enabled}
       <ImageCarousel {items} />

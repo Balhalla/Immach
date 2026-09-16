@@ -13,6 +13,7 @@
   import Skeleton from '$lib/elements/Skeleton.svelte';
   import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
+  import { tagBadgeManager } from '$lib/managers/tag-badge-manager.svelte';
   import type { TimelineDay } from '$lib/managers/timeline-manager/timeline-day.svelte';
   import { isIntersecting } from '$lib/managers/timeline-manager/internal/intersection-support.svelte';
   import type { TimelineMonth } from '$lib/managers/timeline-manager/timeline-month.svelte';
@@ -21,11 +22,15 @@
   import { assetsSnapshot } from '$lib/managers/timeline-manager/utils.svelte';
   import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
+  import { showTagBadges } from '$lib/stores/preferences.store';
   import { isAssetViewerRoute, navigate } from '$lib/utils/navigation';
   import { getTimes, type ScrubberListener } from '$lib/utils/timeline-util';
   import { type AlbumResponseDto, type PersonResponseDto, type UserResponseDto } from '@immich/sdk';
+  import { IconButton } from '@immich/ui';
+  import { mdiTagMultipleOutline } from '@mdi/js';
   import { DateTime } from 'luxon';
   import { onDestroy, onMount, tick, type Snippet } from 'svelte';
+  import { t } from 'svelte-i18n';
   import type { UpdatePayload } from 'vite';
 
   interface Props {
@@ -42,6 +47,7 @@
     withStacked?: boolean;
     showArchiveIcon?: boolean;
     isShared?: boolean;
+    tagBadgeToggle?: boolean;
     album?: AlbumResponseDto;
     albumUsers?: UserResponseDto[];
     person?: PersonResponseDto;
@@ -74,6 +80,7 @@
     withStacked = false,
     showArchiveIcon = false,
     isShared = false,
+    tagBadgeToggle = false,
     album,
     albumUsers = [],
     person,
@@ -120,6 +127,12 @@
 
   $effect(() => {
     timelineManager.scrollableElement = scrollableElement;
+  });
+
+  $effect(() => {
+    if ($showTagBadges) {
+      tagBadgeManager.ensureLoaded();
+    }
   });
 
   const getAssetPosition = (assetId: string, timelineMonth: TimelineMonth) =>
@@ -600,6 +613,22 @@
   />
 {/if}
 
+{#if tagBadgeToggle}
+  <div class="absolute inset-e-16 top-2 z-20" data-tag-badge-toggle>
+    <div class="rounded-full bg-white/70 shadow-sm backdrop-blur-sm dark:bg-black/40">
+      <IconButton
+        shape="round"
+        color={$showTagBadges ? 'primary' : 'secondary'}
+        variant="ghost"
+        aria-label={$showTagBadges ? $t('tag_badges_hide') : $t('tag_badges_show')}
+        title={$showTagBadges ? $t('tag_badges_hide') : $t('tag_badges_show')}
+        icon={mdiTagMultipleOutline}
+        onclick={() => ($showTagBadges = !$showTagBadges)}
+      />
+    </div>
+  </div>
+{/if}
+
 <!-- Right margin MUST be equal to the width of scrubber -->
 <section
   id="asset-grid"
@@ -668,6 +697,7 @@
               <Thumbnail
                 showStackedIcon={withStacked}
                 {showArchiveIcon}
+                tagBadges
                 {asset}
                 {albumUsers}
                 {groupIndex}
