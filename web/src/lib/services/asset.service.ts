@@ -49,6 +49,7 @@ import AssetAddToAlbumModal from '$lib/modals/AssetAddToAlbumModal.svelte';
 import AssetTagModal from '$lib/modals/AssetTagModal.svelte';
 import ProfileImageCropperModal from '$lib/modals/ProfileImageCropperModal.svelte';
 import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
+import WatermarkDownloadChooserModal from '$lib/modals/WatermarkDownloadChooserModal.svelte';
 import { Route } from '$lib/route';
 import { SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
 import { getAssetMediaUrl, getSharedLink, sleep } from '$lib/utils';
@@ -56,6 +57,7 @@ import { downloadUrl } from '$lib/utils';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
 import { buildDownloadUrl, buildViewUrl, resolveDriveId } from '$lib/utils/idb-drive';
+import { getVariantDownloadChoice, getVariantEntry } from '$lib/utils/idb-variants';
 
 export const getAssetBulkActions = ($t: MessageFormatter) => {
   const ownedAssets = assetMultiSelectManager.ownedAssets;
@@ -120,8 +122,7 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
     icon: mdiDownload,
     shortcuts: { key: 'd', shift: true },
     $if: () => !!authUser,
-    onAction: () =>
-      driveId ? window.open(buildDownloadUrl(driveId), '_blank') : handleDownloadAsset(asset, { edited: true }),
+    onAction: () => (driveId ? handleDriveDownload(driveId) : handleDownloadAsset(asset, { edited: true })),
   };
 
   const DownloadOriginal: ActionItem = {
@@ -135,10 +136,13 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
     title: $t('idb_open_drive_original'),
     icon: mdiGoogleDrive,
     $if: () => !!driveId,
-    onAction: () => {
-      if (driveId) {
-        window.open(buildViewUrl(driveId), '_blank');
+    onAction: async () => {
+      if (!driveId) {
+        return;
       }
+
+      const entry = await getVariantEntry(driveId);
+      window.open(buildViewUrl(entry?.cleanDriveId ?? driveId), '_blank');
     },
   };
 
@@ -340,6 +344,21 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
     RegenerateThumbnailJob,
     TranscodeVideoJob,
   };
+};
+
+const handleDriveDownload = async (driveId: string) => {
+  const choice = await getVariantDownloadChoice(driveId);
+  if (!choice?.watermarkDriveId) {
+    window.open(buildDownloadUrl(choice?.cleanDriveId ?? driveId), '_blank');
+    return;
+  }
+
+  const selected = await modalManager.show(WatermarkDownloadChooserModal, {});
+  if (selected === 'clean') {
+    window.open(buildDownloadUrl(choice.cleanDriveId), '_blank');
+  } else if (selected === 'watermark') {
+    window.open(buildDownloadUrl(choice.watermarkDriveId), '_blank');
+  }
 };
 
 export const handleDownloadAsset = async (asset: AssetResponseDto, { edited }: { edited: boolean }) => {

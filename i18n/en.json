@@ -1215,6 +1215,8 @@
   "hours": "Hours",
   "id": "ID",
   "idb_download_drive_original": "Download Google Drive original",
+  "idb_download_with_watermark": "With watermark",
+  "idb_download_without_watermark": "Without watermark (clean)",
   "idb_open_drive_original": "Open original in Google Drive",
   "idle": "Idle",
   "image": "Image",
