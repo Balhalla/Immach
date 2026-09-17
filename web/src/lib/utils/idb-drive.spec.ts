@@ -80,7 +80,7 @@ describe('idb-drive', () => {
       await expect(
         resolveDriveIdWithOverrides({
           originalFileName: 'a.jpg',
-          originalPath: `C:\\mirror\\2026\\mirror__${AMBIGUOUS_ID}.jpg`,
+          originalPath: String.raw`C:\mirror\2026\mirror__${AMBIGUOUS_ID}.jpg`,
         }),
       ).resolves.toBe(AMBIGUOUS_ID);
     });
