@@ -1,6 +1,7 @@
 <script lang="ts">
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { removeTag, tagAssets } from '$lib/utils/asset-utils';
+  import { categoryNameForTag, compareTagOrder, TAG_CATEGORIES } from '$lib/utils/tag-taxonomy';
   import { getAllTags, upsertTags, type TagResponseDto } from '@immich/sdk';
   import { Button, FormModal } from '@immich/ui';
   import { mdiTag } from '@mdi/js';
@@ -17,15 +18,30 @@
 
   let { onClose, assetIds }: Props = $props();
 
+  const OTHER_CATEGORY = '__other__';
   let allTags: TagResponseDto[] = $state([]);
   let tagMap = $derived(Object.fromEntries(allTags.map((tag) => [tag.id, tag])));
   let selectedIds = new SvelteSet<string>();
   let mode: 'add' | 'remove' = $state('add');
   let query = $state('');
+  let selectedCategory = $state<string | null>(null);
   let lastToggledIndex = $state(-1);
   let disabled = $derived(selectedIds.size === 0);
   let allowCreate = $derived(mode === 'add');
-  let filteredTags = $derived(allTags.filter((tag) => tag.value.toLowerCase().includes(query.trim().toLowerCase())));
+  let queryActive = $derived(query.trim().length > 0);
+  let uncategorizedTags = $derived(allTags.filter((tag) => !categoryNameForTag(tag.value)));
+  let visibleTags = $derived(
+    queryActive || selectedCategory === null
+      ? allTags
+      : selectedCategory === OTHER_CATEGORY
+        ? uncategorizedTags
+        : allTags.filter((tag) => categoryNameForTag(tag.value) === selectedCategory),
+  );
+  let filteredTags = $derived(
+    [...visibleTags]
+      .filter((tag) => tag.value.toLowerCase().includes(query.trim().toLowerCase()))
+      .sort((a, b) => compareTagOrder(a.value, b.value)),
+  );
 
   onMount(async () => {
     allTags = await getAllTags();
@@ -73,6 +89,12 @@
     selectedIds.delete(tag);
   };
 
+  const selectCategory = (name: string | null) => {
+    selectedCategory = name;
+    query = '';
+    lastToggledIndex = -1;
+  };
+
   const toggleTag = (tag: TagResponseDto, event: MouseEvent) => {
     const index = filteredTags.indexOf(tag);
     const select = !selectedIds.has(tag.id);
@@ -104,6 +126,22 @@
           : 'border-transparent bg-danger text-white'
         : 'border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800'
     }`;
+
+  const categoryChipClass = (active: boolean) =>
+    `flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs whitespace-nowrap transition-colors ${
+      active
+        ? 'border-transparent text-white'
+        : 'border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800'
+    }`;
+
+  const allChipClass = (active: boolean) =>
+    `shrink-0 rounded-full border px-2 py-0.5 text-xs whitespace-nowrap transition-colors ${
+      active
+        ? 'border-transparent bg-primary text-white'
+        : 'border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800'
+    }`;
+
+  const otherChipClass = (active: boolean) => `${categoryChipClass(active)} ${active ? 'bg-gray-500' : ''}`;
 </script>
 
 <FormModal
@@ -150,7 +188,6 @@
       defaultFirstOption
       options={allTags.map((tag) => ({ id: tag.id, label: tag.value, value: tag.id }))}
       placeholder={$t('search_tags')}
-      forceFocus
     />
 
     <section class="flex flex-col gap-2">
@@ -173,6 +210,48 @@
           >
             {$t('clear')}
           </Button>
+        {/if}
+      </div>
+      <div
+        class="flex gap-1 overflow-x-auto pb-1 transition-opacity {queryActive ? 'opacity-50' : ''}"
+        role="group"
+        aria-label={$t('category')}
+        data-tag-category-row
+      >
+        <button
+          type="button"
+          class={allChipClass(selectedCategory === null)}
+          aria-pressed={selectedCategory === null}
+          data-tag-category="all"
+          onclick={() => selectCategory(null)}
+        >
+          {$t('all')}
+        </button>
+        {#each TAG_CATEGORIES as category (category.name)}
+          {@const active = selectedCategory === category.name}
+          <button
+            type="button"
+            class={categoryChipClass(active)}
+            style={active ? `background-color: ${category.color}` : undefined}
+            aria-pressed={active}
+            data-tag-category={category.name}
+            onclick={() => selectCategory(category.name)}
+          >
+            <span class="size-2 shrink-0 rounded-full" style="background-color: {active ? '#fff' : category.color}"
+            ></span>
+            {category.name}
+          </button>
+        {/each}
+        {#if uncategorizedTags.length > 0}
+          <button
+            type="button"
+            class={otherChipClass(selectedCategory === OTHER_CATEGORY)}
+            aria-pressed={selectedCategory === OTHER_CATEGORY}
+            data-tag-category="other"
+            onclick={() => selectCategory(OTHER_CATEGORY)}
+          >
+            {$t('other')}
+          </button>
         {/if}
       </div>
       <div class="flex max-h-40 flex-wrap content-start gap-1 overflow-y-auto" data-tag-chip-picker>
