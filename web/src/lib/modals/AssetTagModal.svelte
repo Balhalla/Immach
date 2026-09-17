@@ -8,7 +8,6 @@
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import { SvelteSet } from 'svelte/reactivity';
-  import Combobox, { type ComboBoxOption } from '../components/shared-components/Combobox.svelte';
   import TagPill from '../components/shared-components/TagPill.svelte';
 
   interface Props {
@@ -28,7 +27,11 @@
   let lastToggledIndex = $state(-1);
   let disabled = $derived(selectedIds.size === 0);
   let allowCreate = $derived(mode === 'add');
-  let queryActive = $derived(query.trim().length > 0);
+  let trimmedQuery = $derived(query.trim());
+  let queryActive = $derived(trimmedQuery.length > 0);
+  let canCreate = $derived(
+    allowCreate && queryActive && !allTags.some((tag) => tag.value.toLowerCase() === trimmedQuery.toLowerCase()),
+  );
   let uncategorizedTags = $derived(allTags.filter((tag) => !categoryNameForTag(tag.value)));
   let visibleTags = $derived(
     queryActive || selectedCategory === null
@@ -39,7 +42,7 @@
   );
   let filteredTags = $derived(
     [...visibleTags]
-      .filter((tag) => tag.value.toLowerCase().includes(query.trim().toLowerCase()))
+      .filter((tag) => tag.value.toLowerCase().includes(trimmedQuery.toLowerCase()))
       .sort((a, b) => compareTagOrder(a.value, b.value)),
   );
 
@@ -71,18 +74,16 @@
     onClose(true);
   };
 
-  const handleSelect = async (option?: ComboBoxOption) => {
-    if (!option) {
+  const handleCreate = async () => {
+    if (!canCreate) {
       return;
     }
 
-    if (option.id) {
-      selectedIds.add(option.value);
-    } else if (mode === 'add') {
-      const [newTag] = await upsertTags({ tagUpsertDto: { tags: [option.label] } });
-      allTags.push(newTag);
-      selectedIds.add(newTag.id);
-    }
+    const [newTag] = await upsertTags({ tagUpsertDto: { tags: [trimmedQuery] } });
+    allTags.push(newTag);
+    selectedIds.add(newTag.id);
+    query = '';
+    lastToggledIndex = -1;
   };
 
   const handleRemove = (tag: string) => {
@@ -181,15 +182,6 @@
       </Button>
     </div>
 
-    <Combobox
-      onSelect={handleSelect}
-      label={$t('tag')}
-      {allowCreate}
-      defaultFirstOption
-      options={allTags.map((tag) => ({ id: tag.id, label: tag.value, value: tag.id }))}
-      placeholder={$t('search_tags')}
-    />
-
     <section class="flex flex-col gap-2">
       <div class="flex items-center gap-2">
         <input
@@ -255,6 +247,16 @@
         {/if}
       </div>
       <div class="flex max-h-40 flex-wrap content-start gap-1 overflow-y-auto" data-tag-chip-picker>
+        {#if canCreate}
+          <button
+            type="button"
+            class="rounded-full border border-dashed border-primary px-2 py-0.5 text-xs whitespace-nowrap text-primary transition-colors hover:bg-primary/10"
+            onclick={handleCreate}
+            data-tag-create
+          >
+            {$t('create_tag')}: {trimmedQuery}
+          </button>
+        {/if}
         {#each filteredTags as tag (tag.id)}
           {@const selected = selectedIds.has(tag.id)}
           <button
