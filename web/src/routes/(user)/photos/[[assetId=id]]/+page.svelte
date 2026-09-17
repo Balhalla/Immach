@@ -121,6 +121,9 @@
     <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
 
     <CreateSharedLink />
+    {#if authManager.preferences.tags.enabled && assetMultiSelectManager.isAllUserOwned}
+      <TagAction />
+    {/if}
     <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
     <ActionButton action={Actions.AddToAlbum} />
 

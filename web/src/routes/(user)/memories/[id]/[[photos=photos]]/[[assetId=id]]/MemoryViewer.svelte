@@ -268,6 +268,9 @@
     <AssetSelectControlBar>
       {@const Actions = getAssetBulkActions($t)}
       <CreateSharedLink />
+      {#if authManager.preferences.tags.enabled && assetMultiSelectManager.isAllUserOwned}
+        <TagAction />
+      {/if}
       <IconButton
         shape="round"
         color="secondary"
