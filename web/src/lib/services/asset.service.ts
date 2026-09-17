@@ -56,7 +56,8 @@ import { getAssetMediaUrl, getSharedLink, sleep } from '$lib/utils';
 import { downloadUrl } from '$lib/utils';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
-import { buildDownloadUrl, buildViewUrl, resolveDriveId } from '$lib/utils/idb-drive';
+import { buildDownloadUrl, buildViewUrl, resolveDriveId, resolveDriveIdWithOverrides } from '$lib/utils/idb-drive';
+import { ensureDriveIdOverridesLoaded } from '$lib/utils/idb-drive-overrides';
 import { getVariantDownloadChoice, getVariantEntry } from '$lib/utils/idb-variants';
 
 export const getAssetBulkActions = ($t: MessageFormatter) => {
@@ -109,6 +110,8 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
   const isOwner = !!(authUser && authUser.id === asset.ownerId);
   const smartSearchEnabled = featureFlagsManager.value.smartSearch;
   const driveId = resolveDriveId(asset);
+  // Warm the authoritative override map; action handlers below await the full resolution.
+  void ensureDriveIdOverridesLoaded();
 
   const Share: ActionItem = {
     title: $t('share'),
@@ -122,7 +125,14 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
     icon: mdiDownload,
     shortcuts: { key: 'd', shift: true },
     $if: () => !!authUser,
-    onAction: () => (driveId ? handleDriveDownload(driveId) : handleDownloadAsset(asset, { edited: true })),
+    onAction: async () => {
+      const resolvedDriveId = await resolveDriveIdWithOverrides(asset);
+      if (resolvedDriveId) {
+        await handleDriveDownload(resolvedDriveId);
+      } else {
+        await handleDownloadAsset(asset, { edited: true });
+      }
+    },
   };
 
   const DownloadOriginal: ActionItem = {
@@ -137,12 +147,13 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
     icon: mdiGoogleDrive,
     $if: () => !!driveId,
     onAction: async () => {
-      if (!driveId) {
+      const resolvedDriveId = await resolveDriveIdWithOverrides(asset);
+      if (!resolvedDriveId) {
         return;
       }
 
-      const entry = await getVariantEntry(driveId);
-      window.open(buildViewUrl(entry?.cleanDriveId ?? driveId), '_blank');
+      const entry = await getVariantEntry(resolvedDriveId);
+      window.open(buildViewUrl(entry?.cleanDriveId ?? resolvedDriveId), '_blank');
     },
   };
 

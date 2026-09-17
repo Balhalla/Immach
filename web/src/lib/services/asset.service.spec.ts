@@ -7,6 +7,7 @@ import { getAssetActions, handleDownloadAsset } from '$lib/services/asset.servic
 import { setSharedLink } from '$lib/utils';
 import { getFormatter } from '$lib/utils/i18n';
 import { getVariantDownloadChoice, getVariantEntry, type IdbVariantEntry } from '$lib/utils/idb-variants';
+import { getDriveIdOverride } from '$lib/utils/idb-drive-overrides';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
 import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
@@ -24,6 +25,11 @@ vitest.mock('@immich/ui', () => ({
 vitest.mock('$lib/utils/idb-variants', () => ({
   getVariantDownloadChoice: vitest.fn(),
   getVariantEntry: vitest.fn(),
+}));
+
+vitest.mock('$lib/utils/idb-drive-overrides', () => ({
+  getDriveIdOverride: vitest.fn(),
+  ensureDriveIdOverridesLoaded: vitest.fn(),
 }));
 
 vitest.mock('$lib/utils/i18n', () => ({
@@ -65,6 +71,7 @@ describe('AssetService', () => {
       authManager.setPreferences(preferencesFactory.build());
       vitest.mocked(getVariantEntry).mockResolvedValue(null);
       vitest.mocked(getVariantDownloadChoice).mockResolvedValue(null);
+      vitest.mocked(getDriveIdOverride).mockResolvedValue(null);
     });
 
     it('should allow shared link downloads if the user owns the asset and shared link downloads are disabled', () => {
@@ -130,6 +137,39 @@ describe('AssetService', () => {
       await getAssetActions(() => '', asset).OpenDriveOriginal.onAction({} as never);
 
       expect(open).toHaveBeenCalledWith(`https://drive.google.com/file/d/${cleanDriveId}/view`, '_blank');
+      open.mockRestore();
+    });
+
+    it('should open the drive-id override (full id) instead of the truncated parser id', async () => {
+      const open = vitest.spyOn(globalThis, 'open').mockImplementation(() => null);
+      const fullDriveId = '1-DaR2__OWznpm-CziZdovEenUlegxvht';
+      const fileName = `DSC08618__${fullDriveId}.jpg`;
+      vitest.mocked(getDriveIdOverride).mockImplementation((name) =>
+        Promise.resolve(name === fileName ? fullDriveId : null),
+      );
+      const asset = assetFactory.build({ originalFileName: fileName, originalPath: '/library/other.jpg' });
+
+      await getAssetActions(() => '', asset).OpenDriveOriginal.onAction({} as never);
+
+      expect(open).toHaveBeenCalledWith(`https://drive.google.com/file/d/${fullDriveId}/view`, '_blank');
+      open.mockRestore();
+    });
+
+    it('should download the drive-id override (full id) instead of the truncated parser id', async () => {
+      const open = vitest.spyOn(globalThis, 'open').mockImplementation(() => null);
+      const fullDriveId = '1__knhWEB5vvckmffNCLEvpha-X_biL5-';
+      const fileName = `Balhalla-4025__${fullDriveId}.jpg`;
+      vitest.mocked(getDriveIdOverride).mockImplementation((name) =>
+        Promise.resolve(name === fileName ? fullDriveId : null),
+      );
+      const asset = assetFactory.build({ originalFileName: fileName, originalPath: '/library/other.jpg' });
+
+      await getAssetActions(() => '', asset).Download.onAction({} as never);
+
+      expect(open).toHaveBeenCalledWith(
+        `https://drive.usercontent.google.com/download?id=${fullDriveId}&export=download&confirm=t`,
+        '_blank',
+      );
       open.mockRestore();
     });
 

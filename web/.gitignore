@@ -7,6 +7,7 @@ node_modules
 .env.*
 !.env.example
 
-# generated watermark-variant map (synced from C:\idb-mirror\variants.json by
+# generated watermark-variant map + drive-id override map (synced from C:\idb-mirror by
 # ImmichDriveBridge tools/fork/sync-variants.ps1; see that script for the rebuild loop)
 /static/idb-variants.json
+/static/idb-drive-overrides.json

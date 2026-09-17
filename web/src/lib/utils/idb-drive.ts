@@ -1,4 +1,10 @@
+import { getDriveIdOverride } from '$lib/utils/idb-drive-overrides';
+
 const DRIVE_ID_PATTERN = /^[A-Za-z0-9_-]{20,}$/;
+
+export const basenameOf = (filePath: string): string => {
+  return filePath.replaceAll('\\', '/').split('/').pop() ?? '';
+};
 
 export const extractDriveId = (fileName: string): string | null => {
   if (!fileName) {
@@ -28,8 +34,31 @@ export const resolveDriveId = (asset: { originalFileName: string; originalPath: 
     return fromFileName;
   }
 
-  const basename = asset.originalPath.replaceAll('\\', '/').split('/').pop() ?? '';
+  const basename = basenameOf(asset.originalPath);
   return extractDriveId(basename);
+};
+
+/**
+ * Authoritative resolution order (P2 fix): the bridge-generated override map first (it knows the
+ * real drive id for filenames the parser truncates), then the T0.4 parser. Both asset names are
+ * parser inputs, so both are looked up.
+ */
+export const resolveDriveIdWithOverrides = async (asset: {
+  originalFileName: string;
+  originalPath: string;
+}): Promise<string | null> => {
+  for (const fileName of [asset.originalFileName, basenameOf(asset.originalPath)]) {
+    if (!fileName) {
+      continue;
+    }
+
+    const override = await getDriveIdOverride(fileName);
+    if (override) {
+      return override;
+    }
+  }
+
+  return resolveDriveId(asset);
 };
 
 export const buildImageUrl = (driveId: string): string => {
