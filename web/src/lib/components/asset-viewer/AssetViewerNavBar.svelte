@@ -120,6 +120,7 @@
     <ActionButton action={Actions.StopMotionPhoto} />
     <ActionButton action={Actions.Copy} />
     <ActionButton action={Actions.SharedLinkDownload} />
+    <ActionButton action={Actions.OpenDriveOriginal} />
     <ActionButton action={Actions.Info} />
     <ActionButton action={Actions.Favorite} />
     <ActionButton action={Actions.Unfavorite} />

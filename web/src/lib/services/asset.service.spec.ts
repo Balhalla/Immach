@@ -69,6 +69,47 @@ describe('AssetService', () => {
       const assetActions = getAssetActions(() => '', asset);
       expect(assetActions.SharedLinkDownload.$if?.()).toStrictEqual(true);
     });
+
+    it('should expose the Drive original action only when the filename carries an embedded Drive id', () => {
+      const driveId = '10ZDTXXVtIe--_ucLSVDsvmbCfmZ-xKub';
+      const resolved = assetFactory.build({
+        originalFileName: `DSC03022__${driveId}.jpg`,
+        originalPath: '/library/DSC03022.jpg',
+      });
+      const unresolved = assetFactory.build({
+        originalFileName: 'DSC03022.jpg',
+        originalPath: '/library/DSC03022.jpg',
+      });
+
+      expect(getAssetActions(() => '', resolved).OpenDriveOriginal.$if?.()).toStrictEqual(true);
+      expect(getAssetActions(() => '', unresolved).OpenDriveOriginal.$if?.()).toStrictEqual(false);
+    });
+
+    it('should open the Drive view url from the Drive original action', () => {
+      const open = vitest.spyOn(globalThis, 'open').mockImplementation(() => null);
+      const driveId = '10ZDTXXVtIe--_ucLSVDsvmbCfmZ-xKub';
+      const asset = assetFactory.build({ originalFileName: `DSC03022__${driveId}.jpg` });
+
+      getAssetActions(() => '', asset).OpenDriveOriginal.onAction({} as never);
+
+      expect(open).toHaveBeenCalledWith(`https://drive.google.com/file/d/${driveId}/view`, '_blank');
+      open.mockRestore();
+    });
+
+    it('should open the Drive download url from the Download action when resolved', () => {
+      const open = vitest.spyOn(globalThis, 'open').mockImplementation(() => null);
+      const driveId = '10ZDTXXVtIe--_ucLSVDsvmbCfmZ-xKub';
+      const asset = assetFactory.build({ originalFileName: `DSC03022__${driveId}.jpg` });
+      authManager.setUser(userAdminFactory.build({ id: asset.ownerId }));
+
+      getAssetActions(() => '', asset).Download.onAction({} as never);
+
+      expect(open).toHaveBeenCalledWith(
+        `https://drive.usercontent.google.com/download?id=${driveId}&export=download&confirm=t`,
+        '_blank',
+      );
+      open.mockRestore();
+    });
   });
 
   describe('handleDownloadAsset', () => {

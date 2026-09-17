@@ -20,6 +20,7 @@ import {
   mdiDownload,
   mdiDownloadBox,
   mdiFaceRecognition,
+  mdiGoogleDrive,
   mdiHeadSyncOutline,
   mdiHeart,
   mdiHeartOutline,
@@ -54,6 +55,7 @@ import { getAssetMediaUrl, getSharedLink, sleep } from '$lib/utils';
 import { downloadUrl } from '$lib/utils';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
+import { buildDownloadUrl, buildViewUrl, resolveDriveId } from '$lib/utils/idb-drive';
 
 export const getAssetBulkActions = ($t: MessageFormatter) => {
   const ownedAssets = assetMultiSelectManager.ownedAssets;
@@ -104,6 +106,7 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
   const authUser = authManager.authenticated ? authManager.user : undefined;
   const isOwner = !!(authUser && authUser.id === asset.ownerId);
   const smartSearchEnabled = featureFlagsManager.value.smartSearch;
+  const driveId = resolveDriveId(asset);
 
   const Share: ActionItem = {
     title: $t('share'),
@@ -113,11 +116,12 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
   };
 
   const Download: ActionItem = {
-    title: $t('download'),
+    title: driveId ? $t('idb_download_drive_original') : $t('download'),
     icon: mdiDownload,
     shortcuts: { key: 'd', shift: true },
     $if: () => !!authUser,
-    onAction: () => handleDownloadAsset(asset, { edited: true }),
+    onAction: () =>
+      driveId ? window.open(buildDownloadUrl(driveId), '_blank') : handleDownloadAsset(asset, { edited: true }),
   };
 
   const DownloadOriginal: ActionItem = {
@@ -125,6 +129,17 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
     icon: mdiDownloadBox,
     $if: () => !!authUser && asset.isEdited,
     onAction: () => handleDownloadAsset(asset, { edited: false }),
+  };
+
+  const OpenDriveOriginal: ActionItem = {
+    title: $t('idb_open_drive_original'),
+    icon: mdiGoogleDrive,
+    $if: () => !!driveId,
+    onAction: () => {
+      if (driveId) {
+        window.open(buildViewUrl(driveId), '_blank');
+      }
+    },
   };
 
   const SharedLinkDownload: ActionItem = {
@@ -301,6 +316,7 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
     Share,
     Download,
     DownloadOriginal,
+    OpenDriveOriginal,
     SharedLinkDownload,
     Offline,
     Info,
