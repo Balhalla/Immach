@@ -10,6 +10,14 @@ export interface TagCategory {
 
 export const TAG_CATEGORIES: TagCategory[] = [
   {
+    name: 'Edition',
+    color: '#7c2d12',
+    tags: [
+      'BALAFOLK_2026',
+      'BALHALLAFESTIVAL_2026',
+    ],
+  },
+  {
     name: 'People & Appearance',
     color: '#e11d48',
     tags: [
@@ -185,7 +193,6 @@ export const TAG_CATEGORIES: TagCategory[] = [
       'HENDRIK_KEGEL',
       'LEMKE',
       'BASILE',
-      'BALAFOLK',
       'DAVID_VAN_RANSBEEK',
       'WIM_DRIES',
     ],
