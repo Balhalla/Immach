@@ -4,8 +4,9 @@ import { SvelteSet } from 'svelte/reactivity';
 import { goto } from '$app/navigation';
 import { MediaType, QueryType, validQueryTypes } from '$lib/constants';
 import { Route } from '$lib/route';
-import type { SearchFilter } from '$lib/types';
+import type { SearchFilter, TagMatchMode, TagSearchDto } from '$lib/types';
 import { asLocalTimeISO, parseUtcDate } from '$lib/utils/date-time';
+import { isTagMatchMode } from '$lib/utils/tag-search';
 
 class SearchManager {
   #filter = $state<SearchFilter>(this.#fromQuery({}));
@@ -18,7 +19,7 @@ class SearchManager {
     this.#filter = this.#fromQuery({});
   }
 
-  setQuery(query: MetadataSearchDto | SmartSearchDto) {
+  setQuery(query: TagSearchDto) {
     this.#filter = this.#fromQuery(query);
   }
 
@@ -49,6 +50,7 @@ class SearchManager {
             ? null
             : new SvelteSet(searchQuery.tagIds)
           : new SvelteSet(),
+      tagMatch: this.#tagMatchFromQuery(searchQuery),
       location: {
         country: this.#withNullAsEmptyString(searchQuery.country),
         state: this.#withNullAsEmptyString(searchQuery.state),
@@ -78,7 +80,7 @@ class SearchManager {
     };
   }
 
-  #toQuery(): MetadataSearchDto | SmartSearchDto {
+  #toQuery(): TagSearchDto {
     let type: AssetTypeEnum | undefined = undefined;
     if (this.filter.mediaType === MediaType.Image) {
       type = AssetTypeEnum.Image;
@@ -87,6 +89,7 @@ class SearchManager {
     }
 
     const query = this.filter.query || undefined;
+    const hasTags = this.filter.tagIds !== null && this.filter.tagIds.size > 0;
 
     return {
       query: this.filter.queryType === 'smart' ? query : undefined,
@@ -112,9 +115,15 @@ class SearchManager {
       isNotInAlbum: this.filter.display.isNotInAlbum || undefined,
       personIds: this.filter.personIds.size > 0 ? [...this.filter.personIds] : undefined,
       tagIds: this.filter.tagIds === null ? null : this.filter.tagIds.size > 0 ? [...this.filter.tagIds] : undefined,
+      tagMatch: hasTags ? this.filter.tagMatch : undefined,
       type,
       rating: this.filter.rating,
     };
+  }
+
+  #tagMatchFromQuery(searchQuery: MetadataSearchDto | SmartSearchDto): TagMatchMode {
+    const value = (searchQuery as { tagMatch?: unknown }).tagMatch;
+    return isTagMatchMode(value) ? value : 'all';
   }
 
   #withNullAsEmptyString<T>(value: T | null) {

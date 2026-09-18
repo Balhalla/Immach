@@ -1,0 +1,267 @@
+<script lang="ts">
+  import type { TagResponseDto } from '@immich/sdk';
+  import { Button } from '@immich/ui';
+  import { t } from 'svelte-i18n';
+  import type { SvelteSet } from 'svelte/reactivity';
+  import type { TagMatchMode } from '$lib/types';
+  import { categoryNameForTag, compareTagDisplayOrder, compareTagOrder, TAG_CATEGORIES } from '$lib/utils/tag-taxonomy';
+  import TagPill from '../TagPill.svelte';
+
+  interface Props {
+    allTags: TagResponseDto[];
+    selectedIds: SvelteSet<string>;
+    defaultCategory?: string | null;
+    selectedVariant?: 'primary' | 'danger';
+    allowCreate?: boolean;
+    showMatchMode?: boolean;
+    matchMode?: TagMatchMode;
+    maxHeightClass?: string;
+    sortSelected?: boolean;
+    onSelectionChange?: () => void;
+    onAfterRemove?: () => void;
+    onCreate?: (value: string) => void;
+  }
+
+  let {
+    allTags,
+    selectedIds,
+    defaultCategory = null,
+    selectedVariant = 'primary',
+    allowCreate = false,
+    showMatchMode = false,
+    matchMode = $bindable<TagMatchMode>('all'),
+    maxHeightClass = 'max-h-40',
+    sortSelected = false,
+    onSelectionChange,
+    onAfterRemove,
+    onCreate,
+  }: Props = $props();
+
+  const OTHER_CATEGORY = '__other__';
+  const matchModes: TagMatchMode[] = ['all', 'any', 'none'];
+
+  let tagMap = $derived(Object.fromEntries(allTags.map((tag) => [tag.id, tag])));
+  let query = $state('');
+  let selectedCategory = $state<string | null>(defaultCategory);
+  let lastToggledIndex = $state(-1);
+  let trimmedQuery = $derived(query.trim());
+  let queryActive = $derived(trimmedQuery.length > 0);
+  let canCreate = $derived(
+    allowCreate && queryActive && allTags.every((tag) => tag.value.toLowerCase() !== trimmedQuery.toLowerCase()),
+  );
+  let uncategorizedTags = $derived(allTags.filter((tag) => !categoryNameForTag(tag.value)));
+  let visibleTags = $derived(
+    queryActive || selectedCategory === null
+      ? allTags
+      : selectedCategory === OTHER_CATEGORY
+        ? uncategorizedTags
+        : allTags.filter((tag) => categoryNameForTag(tag.value) === selectedCategory),
+  );
+  let filteredTags = $derived(
+    [...visibleTags]
+      .filter((tag) => tag.value.toLowerCase().includes(trimmedQuery.toLowerCase()))
+      .sort((a, b) => compareTagOrder(a.value, b.value)),
+  );
+  let selectedTags = $derived.by(() => {
+    const tags = [...selectedIds].map((tagId) => tagMap[tagId]).filter((tag): tag is TagResponseDto => Boolean(tag));
+    return sortSelected ? tags.sort((a, b) => compareTagDisplayOrder(a.value, b.value)) : tags;
+  });
+
+  const notifyChange = () => onSelectionChange?.();
+
+  const selectCategory = (name: string | null) => {
+    selectedCategory = name;
+    query = '';
+    lastToggledIndex = -1;
+  };
+
+  const toggleTag = (tag: TagResponseDto, event: MouseEvent) => {
+    const index = filteredTags.indexOf(tag);
+    const select = !selectedIds.has(tag.id);
+
+    if (event.shiftKey && lastToggledIndex >= 0 && lastToggledIndex < filteredTags.length) {
+      const from = Math.min(lastToggledIndex, index);
+      const to = Math.max(lastToggledIndex, index);
+      for (let i = from; i <= to; i++) {
+        if (select) {
+          selectedIds.add(filteredTags[i].id);
+        } else {
+          selectedIds.delete(filteredTags[i].id);
+        }
+      }
+    } else if (select) {
+      selectedIds.add(tag.id);
+    } else {
+      selectedIds.delete(tag.id);
+    }
+
+    lastToggledIndex = index;
+    notifyChange();
+  };
+
+  const handleCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    onCreate?.(trimmedQuery);
+    query = '';
+    lastToggledIndex = -1;
+  };
+
+  const handleRemove = (tagId: string) => {
+    selectedIds.delete(tagId);
+    lastToggledIndex = -1;
+    notifyChange();
+    onAfterRemove?.();
+  };
+
+  const handleClear = () => {
+    selectedIds.clear();
+    lastToggledIndex = -1;
+    notifyChange();
+    onAfterRemove?.();
+  };
+
+  const chipClass = (selected: boolean) =>
+    `rounded-full border px-2 py-0.5 text-xs whitespace-nowrap transition-colors ${
+      selected
+        ? `border-transparent text-white ${selectedVariant === 'danger' ? 'bg-danger' : 'bg-primary'}`
+        : 'border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800'
+    }`;
+
+  const categoryChipClass = (active: boolean) =>
+    `flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs whitespace-nowrap transition-colors ${
+      active
+        ? 'border-transparent text-white'
+        : 'border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800'
+    }`;
+
+  const allChipClass = (active: boolean) =>
+    `shrink-0 rounded-full border px-2 py-0.5 text-xs whitespace-nowrap transition-colors ${
+      active
+        ? 'border-transparent bg-primary text-white'
+        : 'border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800'
+    }`;
+
+  const otherChipClass = (active: boolean) => `${categoryChipClass(active)} ${active ? 'bg-gray-500' : ''}`;
+
+  const matchModeClass = (active: boolean) =>
+    `flex-1 rounded-md px-2 py-0.5 text-xs whitespace-nowrap transition-colors ${
+      active ? 'bg-primary text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+    }`;
+</script>
+
+<section class="flex flex-col gap-2">
+  {#if showMatchMode}
+    <div class="flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800" role="group" aria-label={$t('idb_tag_match')}>
+      {#each matchModes as mode (mode)}
+        <button
+          type="button"
+          class={matchModeClass(matchMode === mode)}
+          aria-pressed={matchMode === mode}
+          data-tag-match={mode}
+          onclick={() => {
+            matchMode = mode;
+            notifyChange();
+          }}
+        >
+          {$t(`idb_match_${mode}`)}
+        </button>
+      {/each}
+    </div>
+  {/if}
+
+  <div class="flex items-center gap-2">
+    <input
+      bind:value={query}
+      oninput={() => (lastToggledIndex = -1)}
+      placeholder={$t('search_tags')}
+      aria-label={$t('search_tags')}
+      class="immich-form-input w-full text-sm"
+      data-tag-chip-search
+    />
+    {#if selectedIds.size > 0}
+      <Button size="tiny" variant="ghost" color="secondary" onclick={handleClear} data-tag-chips-clear>
+        {$t('clear')}
+      </Button>
+    {/if}
+  </div>
+
+  <div
+    class="flex gap-1 overflow-x-auto pb-1 transition-opacity {queryActive ? 'opacity-50' : ''}"
+    role="group"
+    aria-label={$t('category')}
+    data-tag-category-row
+  >
+    <button
+      type="button"
+      class={allChipClass(selectedCategory === null)}
+      aria-pressed={selectedCategory === null}
+      data-tag-category="all"
+      onclick={() => selectCategory(null)}
+    >
+      {$t('all')}
+    </button>
+    {#each TAG_CATEGORIES as category (category.name)}
+      {@const active = selectedCategory === category.name}
+      <button
+        type="button"
+        class={categoryChipClass(active)}
+        style={active ? `background-color: ${category.color}` : undefined}
+        aria-pressed={active}
+        data-tag-category={category.name}
+        onclick={() => selectCategory(category.name)}
+      >
+        <span class="size-2 shrink-0 rounded-full" style="background-color: {active ? '#fff' : category.color}"></span>
+        {category.name}
+      </button>
+    {/each}
+    {#if uncategorizedTags.length > 0}
+      <button
+        type="button"
+        class={otherChipClass(selectedCategory === OTHER_CATEGORY)}
+        aria-pressed={selectedCategory === OTHER_CATEGORY}
+        data-tag-category="other"
+        onclick={() => selectCategory(OTHER_CATEGORY)}
+      >
+        {$t('other')}
+      </button>
+    {/if}
+  </div>
+
+  <div class="flex {maxHeightClass} flex-wrap content-start gap-1 overflow-y-auto" data-tag-chip-picker>
+    {#if canCreate}
+      <button
+        type="button"
+        class="rounded-full border border-dashed border-primary px-2 py-0.5 text-xs whitespace-nowrap text-primary transition-colors hover:bg-primary/10"
+        onclick={handleCreate}
+        data-tag-create
+      >
+        {$t('create_tag')}: {trimmedQuery}
+      </button>
+    {/if}
+    {#each filteredTags as tag (tag.id)}
+      {@const selected = selectedIds.has(tag.id)}
+      <button
+        type="button"
+        class={chipClass(selected)}
+        aria-pressed={selected}
+        data-tag-chip={tag.value}
+        onclick={(event) => toggleTag(tag, event)}
+      >
+        {tag.value}
+      </button>
+    {/each}
+  </div>
+</section>
+
+{#if selectedIds.size > 0}
+  <section class="flex flex-wrap gap-1 py-2" data-tag-staged>
+    {#each selectedTags as tag (tag.id)}
+      <div data-tag-selected={tag.value}>
+        <TagPill label={tag.value} onRemove={() => handleRemove(tag.id)} />
+      </div>
+    {/each}
+  </section>
+{/if}

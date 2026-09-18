@@ -3,6 +3,7 @@
   import OnEvents from '$lib/components/OnEvents.svelte';
   import UserPageLayout, { headerId } from '$lib/components/layouts/UserPageLayout.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import TagFilterButton from '$lib/components/shared-components/tag-picker/TagFilterButton.svelte';
   import Breadcrumbs from '$lib/components/shared-components/tree/Breadcrumbs.svelte';
   import TreeItemThumbnails from '$lib/components/shared-components/tree/TreeItemThumbnails.svelte';
   import TreeItems from '$lib/components/shared-components/tree/TreeItems.svelte';
@@ -85,6 +86,10 @@
 <OnEvents onTagCreate={onRefresh} {onTagUpdate} {onTagDelete} />
 
 <UserPageLayout title={data.meta.title} actions={[Create, Update, Delete]}>
+  {#snippet buttons()}
+    <TagFilterButton />
+  {/snippet}
+
   {#snippet sidebar()}
     <Sidebar>
       <SkipLink target={`#${headerId}`} text={$t('skip_to_tags')} breakpoint="md" />

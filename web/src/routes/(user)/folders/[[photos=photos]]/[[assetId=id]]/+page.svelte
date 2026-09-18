@@ -5,6 +5,7 @@
   import UserPageLayout, { headerId } from '$lib/components/layouts/UserPageLayout.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import GalleryViewer from '$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte';
+  import TagFilterButton from '$lib/components/shared-components/tag-picker/TagFilterButton.svelte';
   import Breadcrumbs from '$lib/components/shared-components/tree/Breadcrumbs.svelte';
   import TreeItemThumbnails from '$lib/components/shared-components/tree/TreeItemThumbnails.svelte';
   import TreeItems from '$lib/components/shared-components/tree/TreeItems.svelte';
@@ -76,6 +77,10 @@
 </script>
 
 <UserPageLayout title={data.meta.title}>
+  {#snippet buttons()}
+    <TagFilterButton />
+  {/snippet}
+
   {#snippet sidebar()}
     <Sidebar>
       <SkipLink target={`#${headerId}`} text={$t('skip_to_folders')} breakpoint="md" />

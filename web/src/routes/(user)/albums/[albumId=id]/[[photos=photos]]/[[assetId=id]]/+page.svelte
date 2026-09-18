@@ -11,6 +11,7 @@
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
+  import TagFilterButton from '$lib/components/shared-components/tag-picker/TagFilterButton.svelte';
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
@@ -512,6 +513,8 @@
       {#if viewMode === AlbumPageViewMode.VIEW}
         <ControlAppBar backIcon={mdiArrowLeft} onClose={() => goto(Route.albums())}>
           {#snippet trailing()}
+            <TagFilterButton />
+
             <ActionButton action={Cast} />
 
             {#if isEditor}

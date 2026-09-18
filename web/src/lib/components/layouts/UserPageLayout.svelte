@@ -70,7 +70,7 @@
     </div>
 
     {#if title || buttons}
-      <div class="absolute flex h-16 w-full place-items-center justify-between border-b p-2 text-dark">
+      <div class="absolute z-2 flex h-16 w-full place-items-center justify-between border-b p-2 text-dark">
         <div class="flex items-center gap-2">
           {#if title}
             <div class="pe-8 outline-none" tabindex="-1" id={headerId}>{title}</div>

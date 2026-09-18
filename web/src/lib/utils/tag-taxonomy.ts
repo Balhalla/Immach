@@ -12,10 +12,7 @@ export const TAG_CATEGORIES: TagCategory[] = [
   {
     name: 'Edition',
     color: '#7c2d12',
-    tags: [
-      'BALAFOLK_2026',
-      'BALHALLAFESTIVAL_2026',
-    ],
+    tags: ['BALAFOLK_2026', 'BALHALLAFESTIVAL_2026'],
   },
   {
     name: 'People & Appearance',
@@ -251,3 +248,18 @@ export const compareTagOrder = (a: string, b: string) => {
   const bOrder = orderByTag.get(b) ?? Number.MAX_SAFE_INTEGER;
   return aOrder === bOrder ? a.localeCompare(b) : aOrder - bOrder;
 };
+
+const displayRankForTag = (tag: string) => {
+  const category = categoryNameForTag(tag);
+  if (category === 'Photographer') {
+    return 0;
+  }
+  if (category === 'Edition') {
+    return 1;
+  }
+  return 2;
+};
+
+// Photographer chip first, then Edition, then the rest in taxonomy order.
+export const compareTagDisplayOrder = (a: string, b: string) =>
+  displayRankForTag(a) - displayRankForTag(b) || compareTagOrder(a, b);

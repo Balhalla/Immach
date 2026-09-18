@@ -1,13 +1,11 @@
 <script lang="ts">
-  import Combobox, { type ComboBoxOption } from '$lib/components/shared-components/Combobox.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { getAllTags, type TagResponseDto } from '@immich/sdk';
-  import { Button, Text } from '@immich/ui';
-  import { onMount } from 'svelte';
-  import { t } from 'svelte-i18n';
-  import { mdiClose } from '@mdi/js';
-  import { getSearchTagsTitle } from './search-bar-utils';
   import { searchManager } from '$lib/managers/search-manager.svelte';
+  import { getAllTags, type TagResponseDto } from '@immich/sdk';
+  import { onMount } from 'svelte';
+  import { SvelteSet } from 'svelte/reactivity';
+  import TagChipPicker from '$lib/components/shared-components/tag-picker/TagChipPicker.svelte';
+  import { getSearchTagsTitle } from './search-bar-utils';
 
   interface Props {
     title: string | undefined;
@@ -18,10 +16,9 @@
   let { title = $bindable(), parentPromise }: Props = $props();
 
   let container = $state<HTMLDivElement>();
-  let selectedTags = $derived(searchManager.filter.tagIds);
   let allTags: TagResponseDto[] = $state([]);
-  let tagMap = $derived(Object.fromEntries(allTags.map((tag) => [tag.id, tag])));
-  let selectedOption = $state(undefined);
+  const fallbackTagIds = new SvelteSet<string>();
+  let selectedIds = $derived<SvelteSet<string>>(searchManager.filter.tagIds ?? fallbackTagIds);
 
   onMount(() => {
     if (parentPromise) {
@@ -31,61 +28,32 @@
     }
   });
 
-  const handleSelect = (option?: ComboBoxOption) => {
-    if (!option || !option.id || selectedTags === null) {
-      return;
+  // `null` means untagged (only settable through a bookmark today); picking a tag
+  // turns it into a regular selection instead of dropping the null filter.
+  const commitSelection = () => {
+    if (searchManager.filter.tagIds === null) {
+      searchManager.filter.tagIds = new SvelteSet(fallbackTagIds);
     }
 
-    selectedTags.add(option.value);
-    selectedOption = undefined;
-    title = getSearchTagsTitle(allTags, selectedTags);
+    title = getSearchTagsTitle(allTags, selectedIds);
   };
 
-  const handleRemove = (tag: string) => {
-    if (selectedTags === null) {
-      return;
-    }
-
-    // Move focus back to the container so it doesn't fallback to the body and closes the search bar
-    container?.focus();
-    selectedTags.delete(tag);
-    title = getSearchTagsTitle(allTags, selectedTags);
-  };
+  // Move focus back to the container so it doesn't fallback to the body and close the search bar
+  const handleAfterRemove = () => container?.focus();
 </script>
 
 {#if authManager.authenticated && authManager.preferences.tags.enabled}
   <div id="location-selection" bind:this={container} tabindex="-1">
-    <form autocomplete="off" id="create-tag-form">
-      <Text class="pb-5">{$t('search_filter_tags_description')}</Text>
-      <Combobox
-        disabled={selectedTags === null}
-        hideLabel
-        onSelect={handleSelect}
-        label={$t('tags')}
-        defaultFirstOption
-        options={allTags.map((tag) => ({ id: tag.id, label: tag.value, value: tag.id }))}
-        bind:selectedOption
-        placeholder={$t('search_tags')}
-      />
-    </form>
-
-    {#if selectedTags?.size}
-      <section class="flex flex-wrap gap-2 pt-5">
-        {#each selectedTags as tagId (tagId)}
-          {@const tag = tagMap[tagId]}
-          {#if tag}
-            <Button
-              size="small"
-              shape="round"
-              color="primary"
-              variant="outline"
-              onclick={() => handleRemove(tagId)}
-              trailingIcon={mdiClose}
-              >{tag.value}
-            </Button>
-          {/if}
-        {/each}
-      </section>
-    {/if}
+    <TagChipPicker
+      {allTags}
+      {selectedIds}
+      defaultCategory="Edition"
+      showMatchMode
+      sortSelected
+      maxHeightClass="max-h-48"
+      bind:matchMode={searchManager.filter.tagMatch}
+      onSelectionChange={commitSelection}
+      onAfterRemove={handleAfterRemove}
+    />
   </div>
 {/if}

@@ -1,6 +1,6 @@
 import type { TagResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observer.mock';
 import { getVisualViewportMock } from '$lib/__mocks__/visual-viewport.mock';
@@ -18,6 +18,14 @@ const tag = (id: string, value: string): TagResponseDto => ({
   updatedAt: '2026-01-01T00:00:00Z',
 });
 
+const allTags = [
+  tag('tag-1', 'holiday'),
+  tag('tag-2', 'family'),
+  tag('tag-3', 'NARAGONIA_QUARTET'),
+  tag('tag-4', 'JOHAN_WIJCHEN'),
+  tag('tag-5', 'BALHALLAFESTIVAL_2026'),
+];
+
 describe('SearchTagsSection component', () => {
   beforeEach(() => {
     vi.stubGlobal('IntersectionObserver', getIntersectionObserverMock());
@@ -32,15 +40,21 @@ describe('SearchTagsSection component', () => {
     searchManager.reset();
   });
 
-  it('removes the tag when its chip is clicked', async () => {
-    const user = userEvent.setup();
+  const renderSection = (tags = allTags) =>
     render(SearchTagsSection, {
-      props: { title: undefined, parentPromise: Promise.resolve([tag('tag-1', 'holiday'), tag('tag-2', 'family')]) },
+      props: { title: undefined, parentPromise: Promise.resolve(tags) },
     });
 
-    await user.click(await screen.findByRole('button', { name: 'holiday' }));
+  it('removes the tag when its chip is clicked', async () => {
+    const user = userEvent.setup();
+    const { container } = renderSection();
 
-    expect(screen.queryByRole('button', { name: 'holiday' })).not.toBeInTheDocument();
+    await screen.findByText('holiday');
+    const removeButton = container.querySelector(':scope [data-tag-selected="holiday"] button');
+    expect(removeButton).not.toBeNull();
+    await user.click(removeButton!);
+
+    expect(container.querySelector('[data-tag-selected="holiday"]')).toBeNull();
     expect([...(searchManager.filter.tagIds ?? [])]).toEqual(['tag-2']);
   });
 
@@ -48,13 +62,63 @@ describe('SearchTagsSection component', () => {
   // search bar treats as focus leaving the search panel
   it('keeps focus inside the section when a chip is removed', async () => {
     const user = userEvent.setup();
-    const { container } = render(SearchTagsSection, {
-      props: { title: undefined, parentPromise: Promise.resolve([tag('tag-1', 'holiday'), tag('tag-2', 'family')]) },
-    });
+    const { container } = renderSection();
 
-    await user.click(await screen.findByRole('button', { name: 'holiday' }));
+    await screen.findByText('holiday');
+    await user.click(container.querySelector(':scope [data-tag-selected="holiday"] button')!);
 
     expect(document.activeElement).not.toBe(document.body);
     expect(container.contains(document.activeElement)).toBe(true);
+  });
+
+  it('adds a tag picked from the categorized grid', async () => {
+    const user = userEvent.setup();
+    const { container } = renderSection();
+
+    await user.click(screen.getByRole('button', { name: 'Band & Workshop' }));
+    await user.click(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET"]')!);
+
+    expect([...(searchManager.filter.tagIds ?? [])]).toEqual(['tag-1', 'tag-2', 'tag-3']);
+    expect(container.querySelector('[data-tag-selected="NARAGONIA_QUARTET"]')).not.toBeNull();
+  });
+
+  it('defaults to the Edition category and filters the grid to it', async () => {
+    const { container } = renderSection();
+
+    expect(container.querySelector('[data-tag-category="Edition"]')?.getAttribute('aria-pressed')).toBe('true');
+    await screen.findByText('BALHALLAFESTIVAL_2026');
+    expect(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET"]')).toBeNull();
+  });
+
+  it('searches across all categories', async () => {
+    const user = userEvent.setup();
+    const { container } = renderSection();
+
+    await user.type(container.querySelector('[data-tag-chip-search]')!, 'naragonia');
+
+    expect(await screen.findByText('NARAGONIA_QUARTET')).toBeInTheDocument();
+    expect(container.querySelector('[data-tag-chip="BALHALLAFESTIVAL_2026"]')).toBeNull();
+  });
+
+  it('changes the match mode on the shared search filter', async () => {
+    const { container } = renderSection();
+    await screen.findByText('BALHALLAFESTIVAL_2026');
+
+    await fireEvent.click(container.querySelector('[data-tag-match="any"]')!);
+
+    expect(searchManager.filter.tagMatch).toBe('any');
+    expect(container.querySelector('[data-tag-match="any"]')?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('sorts the selected pills photographer first', async () => {
+    searchManager.setQuery({ tagIds: ['tag-3', 'tag-4', 'tag-5'] });
+    const { container } = renderSection();
+    await screen.findAllByText('BALHALLAFESTIVAL_2026');
+
+    const selected = [...container.querySelectorAll<HTMLElement>('[data-tag-selected]')].map(
+      (node) => node.dataset.tagSelected,
+    );
+
+    expect(selected).toEqual(['JOHAN_WIJCHEN', 'BALHALLAFESTIVAL_2026', 'NARAGONIA_QUARTET']);
   });
 });

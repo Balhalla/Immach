@@ -1,4 +1,4 @@
-import type { QueueResponseDto } from '@immich/sdk';
+import type { MetadataSearchDto, QueueResponseDto, SmartSearchDto } from '@immich/sdk';
 import type { ActionItem } from '@immich/ui';
 import type { DateTime } from 'luxon';
 import type { SvelteSet } from 'svelte/reactivity';
@@ -61,12 +61,21 @@ export type SearchLocationFilter = {
   city?: string;
 };
 
+export type TagMatchMode = 'all' | 'any' | 'none';
+
+// Search DTO extended with the fork's tag match mode. The URL keeps the legacy flat
+// shape (plus `tagMatch`) so existing chips/bookmarks keep working; the structured
+// `filter.tagIds` payload is built from it when a request is made.
+export type TagSearchDto = MetadataSearchDto &
+  Pick<SmartSearchDto, 'query' | 'queryAssetId' | 'language'> & { tagMatch?: TagMatchMode };
+
 export type SearchFilter = {
   query: string;
   ocr?: string;
   queryType: 'smart' | 'metadata' | 'description' | 'fullPath' | 'ocr';
   personIds: SvelteSet<string>;
   tagIds: SvelteSet<string> | null;
+  tagMatch: TagMatchMode;
   location: SearchLocationFilter;
   queryAssetId?: string;
   camera: SearchCameraFilter;

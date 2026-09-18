@@ -1,6 +1,7 @@
 <script lang="ts">
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import TagFilterButton from '$lib/components/shared-components/tag-picker/TagFilterButton.svelte';
   import type { SelectionBBox } from '$lib/components/shared-components/map/types';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
@@ -106,7 +107,10 @@
         {$t('assets_count', { values: { count: assetCount } })}
       </p>
     </div>
-    <CloseButton onclick={onClose} />
+    <div class="flex items-center gap-1">
+      <TagFilterButton size="small" />
+      <CloseButton onclick={onClose} />
+    </div>
   </div>
 
   <div class="min-h-0 flex-1">
