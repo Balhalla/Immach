@@ -1,13 +1,11 @@
 import { getAllTags, searchAssets, type TagResponseDto } from '@immich/sdk';
 import { SvelteMap } from 'svelte/reactivity';
 import { eventManager, type AssetsTagChange } from '$lib/managers/event-manager.svelte';
-import { TAG_TAXONOMY_ORDER } from '$lib/utils/tag-taxonomy';
+import { compareTagDisplayOrder } from '$lib/utils/tag-taxonomy';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const SEARCH_CONCURRENCY = 8;
 const SEARCH_PAGE_SIZE = 1000;
-
-const taxonomyOrder = new Map(TAG_TAXONOMY_ORDER.map((name, index) => [name, index]));
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -197,13 +195,9 @@ class TagBadgeManager {
   }
 
   #sortTagIds(tagIds: string[]) {
-    return [...tagIds].sort((a, b) => {
-      const aValue = this.#tags.get(a)?.value ?? '';
-      const bValue = this.#tags.get(b)?.value ?? '';
-      const aOrder = taxonomyOrder.get(aValue) ?? Number.MAX_SAFE_INTEGER;
-      const bOrder = taxonomyOrder.get(bValue) ?? Number.MAX_SAFE_INTEGER;
-      return aOrder === bOrder ? aValue.localeCompare(bValue) : aOrder - bOrder;
-    });
+    return [...tagIds].sort((a, b) =>
+      compareTagDisplayOrder(this.#tags.get(a)?.value ?? '', this.#tags.get(b)?.value ?? ''),
+    );
   }
 }
 

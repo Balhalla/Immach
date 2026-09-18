@@ -249,7 +249,9 @@ export const compareTagOrder = (a: string, b: string) => {
   return aOrder === bOrder ? a.localeCompare(b) : aOrder - bOrder;
 };
 
-const displayRankForTag = (tag: string) => {
+// Lower rank sorts first: Photographer (0), Edition (1), then every other
+// known/unknown tag (2) in taxonomy order.
+export const tagDisplayRank = (tag: string) => {
   const category = categoryNameForTag(tag);
   if (category === 'Photographer') {
     return 0;
@@ -262,4 +264,11 @@ const displayRankForTag = (tag: string) => {
 
 // Photographer chip first, then Edition, then the rest in taxonomy order.
 export const compareTagDisplayOrder = (a: string, b: string) =>
-  displayRankForTag(a) - displayRankForTag(b) || compareTagOrder(a, b);
+  tagDisplayRank(a) - tagDisplayRank(b) || compareTagOrder(a, b);
+
+const colorByCategory = new Map(TAG_CATEGORIES.map((category) => [category.name, category.color]));
+
+export const categoryColorForTag = (tag: string): string | undefined => {
+  const category = categoryNameForTag(tag);
+  return category === undefined ? undefined : colorByCategory.get(category);
+};
