@@ -186,7 +186,7 @@ export const TAG_CATEGORIES: TagCategory[] = [
       'LEMKE',
       'BASILE',
       'BALAFOLK',
-      'DAVID',
+      'DAVID_VAN_RANSBEEK',
       'WIM_DRIES',
     ],
   },
