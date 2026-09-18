@@ -2,11 +2,13 @@
   import { clickOutside } from '$lib/actions/click-outside';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { searchManager } from '$lib/managers/search-manager.svelte';
+  import { applyTagCombo, type SavedTagCombo } from '$lib/stores/saved-tag-combos.store';
   import type { TagMatchMode } from '$lib/types';
   import { IconButton } from '@immich/ui';
   import { mdiTagMultiple } from '@mdi/js';
   import { SvelteSet } from 'svelte/reactivity';
   import { t } from 'svelte-i18n';
+  import SavedTagComboChips from './SavedTagComboChips.svelte';
   import TagFilterPopover from './TagFilterPopover.svelte';
 
   interface Props {
@@ -52,28 +54,35 @@
     searchManager.filter.tagMatch = tagMatch;
     void searchManager.submit();
   };
+
+  const applySavedCombo = (combo: SavedTagCombo) => {
+    void applyTagCombo(combo);
+  };
 </script>
 
 {#if authManager.authenticated && authManager.preferences.tags.enabled}
-  <div class="relative" use:clickOutside={{ onOutclick: close, onEscape: close }}>
-    <IconButton
-      shape="round"
-      color="secondary"
-      variant="ghost"
-      aria-label={$t('idb_filter_by_tags')}
-      icon={mdiTagMultiple}
-      {size}
-      onclick={toggle}
-      data-tag-filter-button
-    />
-    {#if isOpen}
-      <TagFilterPopover
-        initialTagIds={currentTagIds}
-        initialMatchMode={searchManager.filter.tagMatch}
-        {anchorStyle}
-        onApply={applyFilter}
-        onClose={close}
+  <div class="flex min-w-0 items-center gap-1" data-tag-filter-bar>
+    <SavedTagComboChips {size} onApply={applySavedCombo} />
+    <div class="relative" use:clickOutside={{ onOutclick: close, onEscape: close }}>
+      <IconButton
+        shape="round"
+        color="secondary"
+        variant="ghost"
+        aria-label={$t('idb_filter_by_tags')}
+        icon={mdiTagMultiple}
+        {size}
+        onclick={toggle}
+        data-tag-filter-button
       />
-    {/if}
+      {#if isOpen}
+        <TagFilterPopover
+          initialTagIds={currentTagIds}
+          initialMatchMode={searchManager.filter.tagMatch}
+          {anchorStyle}
+          onApply={applyFilter}
+          onClose={close}
+        />
+      {/if}
+    </div>
   </div>
 {/if}
