@@ -7,6 +7,7 @@
   import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
   import GalleryViewer from '$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte';
   import SearchBar from '$lib/components/shared-components/search-bar/SearchBar.svelte';
+  import TagFilterButton from '$lib/components/shared-components/tag-picker/TagFilterButton.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
@@ -27,10 +28,12 @@
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
   import { lang, locale } from '$lib/stores/preferences.store';
+  import type { TagMatchMode } from '$lib/types';
   import { handlePromiseError } from '$lib/utils';
   import { parseUtcDate } from '$lib/utils/date-time';
   import { handleError } from '$lib/utils/handle-error';
   import { isAlbumsRoute, isPeopleRoute } from '$lib/utils/navigation';
+  import { toApiSearchDto } from '$lib/utils/tag-search';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import {
     type AlbumResponseDto,
@@ -45,7 +48,7 @@
   } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton, LoadingSpinner } from '@immich/ui';
   import { mdiArrowLeft, mdiClose, mdiDotsVertical, mdiImageOffOutline, mdiSelectAll } from '@mdi/js';
-  import { onMount, tick, untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
 
   const viewport: Viewport = $state({ width: 0, height: 0 });
@@ -57,17 +60,20 @@
   let previousRoute = $state<string>(Route.explore());
 
   let nextPage = $state(1);
+  let nextCursor = $state<string | null>(null);
   let searchResultAlbums: AlbumResponseDto[] = $state([]);
   let searchResultAssets: AssetResponseDto[] = $state([]);
   let isLoading = $state(true);
   let scrollY = $state(0);
   let scrollYHistory = 0;
 
-  type SearchTerms = MetadataSearchDto & Pick<SmartSearchDto, 'query' | 'queryAssetId'>;
+  type SearchTerms = MetadataSearchDto &
+    Pick<SmartSearchDto, 'query' | 'queryAssetId' | 'language'> & { tagMatch?: TagMatchMode };
   let searchQuery = $derived(page.url.searchParams.get(QueryParameter.QUERY));
   let smartSearchEnabled = $derived(featureFlagsManager.value.smartSearch);
   let terms = $derived<SearchTerms>(searchQuery ? JSON.parse(searchQuery) : {});
-  let searchTermKeys = $derived(getObjectKeys(terms));
+  let hasStructuredTags = $derived(Array.isArray(terms.tagIds) && terms.tagIds.length > 0);
+  let searchTermKeys = $derived(getObjectKeys(terms).filter((key) => key !== 'tagMatch'));
 
   $effect(() => {
     // we want this to *only* be reactive on `terms`
@@ -120,8 +126,15 @@
     assetMultiSelectManager.selectAssets(searchResultAssets.map((asset) => toTimelineAsset(asset)));
   };
 
+  // bumped on every new query so responses of a previous query cannot append to the
+  // new result set (the cursor flow can have a page request in flight when the
+  // filter changes)
+  let queryGeneration = 0;
+
   async function onSearchQueryUpdate() {
+    queryGeneration++;
     nextPage = 1;
+    nextCursor = null;
     searchResultAssets = [];
     searchResultAlbums = [];
     await loadNextPage(true);
@@ -129,33 +142,45 @@
 
   // eslint-disable-next-line svelte/valid-prop-names-in-kit-pages
   export const loadNextPage = async (force?: boolean) => {
-    if (!nextPage || (isLoading && !force)) {
+    if ((isLoading && !force) || (!force && (hasStructuredTags ? !nextCursor : !nextPage))) {
       return;
     }
     isLoading = true;
+    const generation = queryGeneration;
 
     const searchDto: SearchTerms = {
-      page: nextPage,
+      visibility: AssetVisibility.Timeline,
       withExif: true,
+      ...(hasStructuredTags ? (nextCursor ? { cursor: nextCursor } : {}) : { page: nextPage }),
       ...terms,
     };
 
     try {
+      // structured tag searches reject the deprecated flat fields, so the whole DTO
+      // is translated to `filter` (and later pages use the cursor) when tags are set
+      const apiDto = toApiSearchDto(searchDto);
       const { albums, assets } =
-        ('query' in searchDto || 'queryAssetId' in searchDto) && smartSearchEnabled
-          ? await searchSmart({
-              smartSearchDto: { visibility: AssetVisibility.Timeline, ...searchDto, language: $lang },
-            })
-          : await searchAssets({ metadataSearchDto: { visibility: AssetVisibility.Timeline, ...searchDto } });
+        (apiDto.query || apiDto.queryAssetId) && smartSearchEnabled
+          ? await searchSmart({ smartSearchDto: { ...apiDto, language: $lang } })
+          : await searchAssets({ metadataSearchDto: apiDto });
+
+      if (generation !== queryGeneration) {
+        return;
+      }
 
       searchResultAlbums.push(...albums.items);
       searchResultAssets.push(...assets.items);
 
       nextPage = Number(assets.nextPage) || 0;
+      nextCursor = assets.nextCursor ?? null;
     } catch (error) {
-      handleError(error, $t('loading_search_results_failed'));
+      if (generation === queryGeneration) {
+        handleError(error, $t('loading_search_results_failed'));
+      }
     } finally {
-      isLoading = false;
+      if (generation === queryGeneration) {
+        isLoading = false;
+      }
     }
   };
 
@@ -243,12 +268,19 @@
 
   function removeFilter(key: keyof SearchTerms) {
     delete terms[key];
+    if (key === 'tagIds') {
+      delete terms.tagMatch;
+    }
     assetMultiSelectManager.clear();
     void goto(Route.search(terms));
     searchManager.setQuery(terms);
   }
 
-  onMount(() => searchManager.setQuery(terms));
+  $effect(() => {
+    // keep the global search filter in sync with the URL so the tag filter button
+    // edits the selection that is actually being shown
+    searchManager.setQuery(terms);
+  });
 </script>
 
 <svelte:window bind:scrollY />
@@ -279,7 +311,8 @@
                 {/await}
               {:else if searchKey === 'tagIds' && (Array.isArray(value) || value === null)}
                 {#await getTagNames(value) then tagNames}
-                  {tagNames}
+                  {#if terms.tagMatch && terms.tagMatch !== 'all'}{$t(`idb_match_${terms.tagMatch}`)}:
+                  {/if}{tagNames}
                 {/await}
               {:else if searchKey === 'rating'}
                 {$t('rating_count', { values: { count: value ?? 0 } })}
@@ -398,6 +431,9 @@
     {:else}
       <div class="fixed inset-s-0 top-0 z-2 w-full">
         <ControlAppBar onClose={() => goto(previousRoute)} backIcon={mdiArrowLeft}>
+          {#snippet trailing()}
+            <TagFilterButton mode="merge" />
+          {/snippet}
           <div class="mx-auto w-full max-w-2xl pe-2">
             <SearchBar grayTheme={false} />
           </div>
