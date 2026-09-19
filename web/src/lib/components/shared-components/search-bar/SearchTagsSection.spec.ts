@@ -1,6 +1,6 @@
 import type { TagResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observer.mock';
 import { getVisualViewportMock } from '$lib/__mocks__/visual-viewport.mock';
@@ -24,6 +24,8 @@ const allTags = [
   tag('tag-3', 'NARAGONIA_QUARTET'),
   tag('tag-4', 'JOHAN_WIJCHEN'),
   tag('tag-5', 'BALHALLAFESTIVAL_2026'),
+  tag('tag-6', 'MOUSTACHE'),
+  tag('tag-7', 'MAIN_STAGE'),
 ];
 
 describe('SearchTagsSection component', () => {
@@ -120,5 +122,72 @@ describe('SearchTagsSection component', () => {
     );
 
     expect(selected).toEqual(['JOHAN_WIJCHEN', 'BALHALLAFESTIVAL_2026', 'NARAGONIA_QUARTET']);
+  });
+
+  it('scopes the picker to a single category without a category row', async () => {
+    const { container } = render(SearchTagsSection, {
+      props: {
+        title: undefined,
+        parentPromise: Promise.resolve(allTags),
+        categoryNames: ['Photographer'],
+        defaultCategory: 'Photographer',
+        showCategoryRow: false,
+      },
+    });
+
+    await screen.findByText('JOHAN_WIJCHEN');
+    expect(container.querySelector('[data-tag-category-row]')).toBeNull();
+    expect(container.querySelector('[data-tag-chip="BALHALLAFESTIVAL_2026"]')).toBeNull();
+    expect(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET"]')).toBeNull();
+  });
+
+  it('shows the empty state for a category without tags', async () => {
+    const { container } = render(SearchTagsSection, {
+      props: {
+        title: undefined,
+        parentPromise: Promise.resolve(allTags),
+        categoryNames: ['Organisation'],
+        defaultCategory: 'Organisation',
+        showCategoryRow: false,
+      },
+    });
+
+    await waitFor(() => expect(container.querySelector('[data-tag-picker-empty]')).not.toBeNull());
+  });
+
+  it('limits the category row to the remaining categories in the tags scope', async () => {
+    const { container } = render(SearchTagsSection, {
+      props: {
+        title: undefined,
+        parentPromise: Promise.resolve(allTags),
+        categoryNames: ['People & Appearance', 'Band & Workshop'],
+        defaultCategory: null,
+      },
+    });
+
+    await screen.findByText('NARAGONIA_QUARTET');
+    const categories = [...container.querySelectorAll<HTMLElement>('[data-tag-category]')].map(
+      (node) => node.dataset.tagCategory,
+    );
+
+    expect(categories).toEqual(['all', 'People & Appearance', 'Band & Workshop']);
+    expect(await screen.findByText('MOUSTACHE')).toBeInTheDocument();
+    expect(container.querySelector('[data-tag-chip="JOHAN_WIJCHEN"]')).toBeNull();
+  });
+
+  it('keeps pinned selections from other categories when scoped', async () => {
+    searchManager.setQuery({ tagIds: ['tag-4'] });
+    const { container } = render(SearchTagsSection, {
+      props: {
+        title: undefined,
+        parentPromise: Promise.resolve(allTags),
+        categoryNames: ['Edition'],
+        defaultCategory: 'Edition',
+        showCategoryRow: false,
+      },
+    });
+
+    await screen.findByText('BALHALLAFESTIVAL_2026');
+    expect(container.querySelector('[data-tag-selected="JOHAN_WIJCHEN"]')).not.toBeNull();
   });
 });

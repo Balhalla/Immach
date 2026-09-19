@@ -1,4 +1,10 @@
-import { categoryColorForTag, compareTagDisplayOrder, tagDisplayRank } from '$lib/utils/tag-taxonomy';
+import {
+  categoryColorForTag,
+  categoryNameForTag,
+  compareTagDisplayOrder,
+  tagDisplayRank,
+  TAG_CATEGORIES,
+} from '$lib/utils/tag-taxonomy';
 
 describe('tag-taxonomy display order', () => {
   it('ranks photographers first, then editions, then everything else', () => {
@@ -40,5 +46,15 @@ describe('tag-taxonomy display order', () => {
     expect(categoryColorForTag('BALHALLAFESTIVAL_2026')).toBe('#7c2d12');
     expect(categoryColorForTag('NARAGONIA_QUARTET')).toBe('#4f46e5');
     expect(categoryColorForTag('UNKNOWN_TAG')).toBeUndefined();
+  });
+
+  it('carries the renamed Location category and the new empty Organisation category', () => {
+    expect(categoryNameForTag('MAIN_STAGE')).toBe('Location');
+    expect(categoryColorForTag('MAIN_STAGE')).toBe('#059669');
+    expect(TAG_CATEGORIES.some((category) => category.name === 'Event Spaces & Environment')).toBe(false);
+    expect(TAG_CATEGORIES.find((category) => category.name === 'Organisation')).toMatchObject({
+      color: '#c026d3',
+      tags: [],
+    });
   });
 });

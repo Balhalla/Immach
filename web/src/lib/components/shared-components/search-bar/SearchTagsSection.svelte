@@ -10,10 +10,19 @@
   interface Props {
     title: string | undefined;
     parentPromise: Promise<TagResponseDto[]> | undefined;
+    categoryNames?: string[] | null;
+    defaultCategory?: string | null;
+    showCategoryRow?: boolean;
   }
 
-  // eslint-disable-next-line no-useless-assignment
-  let { title = $bindable(), parentPromise }: Props = $props();
+  let {
+    // eslint-disable-next-line no-useless-assignment
+    title = $bindable(),
+    parentPromise,
+    categoryNames = null,
+    defaultCategory = 'Edition',
+    showCategoryRow = true,
+  }: Props = $props();
 
   let container = $state<HTMLDivElement>();
   let allTags: TagResponseDto[] = $state([]);
@@ -47,7 +56,9 @@
     <TagChipPicker
       {allTags}
       {selectedIds}
-      defaultCategory="Edition"
+      {defaultCategory}
+      {categoryNames}
+      {showCategoryRow}
       showMatchMode
       sortSelected
       maxHeightClass="max-h-48"

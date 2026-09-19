@@ -1224,6 +1224,7 @@
   "idb_match_all": "All of these",
   "idb_match_any": "Any of these",
   "idb_match_none": "None of these",
+  "idb_no_tags_in_category": "No tags in this category",
   "idb_open_drive_original": "Open original in Google Drive",
   "idb_save_tag_combo": "Save combination",
   "idb_save_tag_combo_name": "Combination name",

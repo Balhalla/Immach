@@ -6,11 +6,14 @@
   import {
     mdiAccount,
     mdiCalendarBlank,
+    mdiCalendarStar,
     mdiChevronDown,
     mdiChevronUp,
+    mdiDomain,
     mdiImage,
     mdiMagnify,
     mdiMapMarker,
+    mdiMusic,
     mdiTagMultiple,
     mdiTune,
   } from '@mdi/js';
@@ -38,6 +41,7 @@
   import { onMount } from 'svelte';
   import { searchManager } from '$lib/managers/search-manager.svelte';
   import SearchButton from './SearchButton.svelte';
+  import { TAG_CATEGORIES } from '$lib/utils/tag-taxonomy';
 
   interface Props {
     id: string;
@@ -59,9 +63,29 @@
     onSearch,
   }: Props = $props();
 
+  // The dedicated tabs drive the picker scoped to a single taxonomy category; the
+  // last tab covers every remaining category through the chip row.
+  const TAG_TABS = [
+    { name: 'photographer', category: 'Photographer', icon: mdiAccount },
+    { name: 'organisation', category: 'Organisation', icon: mdiDomain },
+    { name: 'edition', category: 'Edition', icon: mdiCalendarStar },
+    { name: 'location', category: 'Location', icon: mdiMapMarker },
+    { name: 'band', category: 'Band & Workshop', icon: mdiMusic },
+  ];
+  const DEDICATED_CATEGORIES = new Set(TAG_TABS.map((tab) => tab.category));
+  const REMAINING_CATEGORIES = TAG_CATEGORIES.filter((category) => !DEDICATED_CATEGORIES.has(category.name)).map(
+    (category) => category.name,
+  );
+
+  const tagTabs = [
+    ...TAG_TABS.map((tab) => ({ name: tab.name, icon: tab.icon, title: tab.category })),
+    { name: 'tags', icon: mdiTagMultiple, title: $t('tags') },
+  ];
+
   let searchHistory = $state<SearchHistorySection>();
 
-  let activeFilter = $state('type');
+  let activeFilter = $state('edition');
+  let advancedFilter = $state<string | undefined>('type');
   let showAdvanced = $state(false);
   let peoplePromise = $state<Promise<PersonResponseDto[]>>();
   let people = $state<PersonResponseDto[]>();
@@ -87,7 +111,7 @@
   let tagsTitle = $state<string>();
   let mediaTitle = $derived(getSearchMediaTitle(searchManager.filter.mediaType));
 
-  let filters = [
+  const advancedFilters = [
     {
       name: 'type',
       icon: mdiMagnify,
@@ -112,16 +136,6 @@
       title: $t('places'),
       activeTitle: () => placesTitle,
     },
-    ...(authManager.authenticated && authManager.preferences.tags.enabled
-      ? [
-          {
-            name: 'tags',
-            icon: mdiTagMultiple,
-            title: $t('tags'),
-            activeTitle: () => tagsTitle,
-          },
-        ]
-      : []),
     {
       name: 'media',
       icon: mdiImage,
@@ -148,7 +162,7 @@
       void peoplePromise.then((res) => (people = res));
     }
 
-    if (searchManager.filter.tagIds?.size && !tagsPromise) {
+    if (!tagsPromise) {
       tagsPromise = getAllTags();
       void tagsPromise.then((res) => (tags = res));
     }
@@ -161,8 +175,8 @@
   });
 
   $effect(() => {
-    if (tags) {
-      tagsTitle = getSearchTagsTitle(tags, searchManager.filter.tagIds!);
+    if (tags && searchManager.filter.tagIds) {
+      tagsTitle = getSearchTagsTitle(tags, searchManager.filter.tagIds);
     }
   });
 
@@ -200,33 +214,41 @@
       />
       <div class="px-5">
         <Text class="py-5" fontWeight="medium" aria-hidden={true}>{$t('filter_by')}</Text>
-        <div class="flex flex-wrap gap-2">
-          {#each filters as item (item.name)}
-            <SearchButton
-              active={activeFilter === item.name || Boolean(item.activeTitle())}
-              leadingIcon={item.icon}
-              class={activeFilter === item.name ? 'border-2' : undefined}
-              onclick={() => (activeFilter = item.name)}
-            >
-              {item.activeTitle() ?? item.title}
-            </SearchButton>
+        <div class="flex flex-wrap gap-2" data-tag-filter-tabs>
+          {#each tagTabs as item (item.name)}
+            <span class="contents" data-tag-filter-tab={item.name}>
+              <SearchButton
+                active={activeFilter === item.name}
+                leadingIcon={item.icon}
+                class={activeFilter === item.name ? 'border-2' : undefined}
+                onclick={() => (activeFilter = item.name)}
+              >
+                {item.title}
+              </SearchButton>
+            </span>
           {/each}
         </div>
       </div>
       {#if activeFilter}
         <div class="px-5 pt-5">
-          {#if activeFilter === 'type'}
-            <SearchTextSection />
-          {:else if activeFilter === 'people'}
-            <SearchPeopleSection bind:title={peopleTitle} parentPromise={peoplePromise} />
-          {:else if activeFilter === 'date'}
-            <SearchDateSection />
-          {:else if activeFilter === 'places'}
-            <SearchLocationSection />
-          {:else if activeFilter === 'tags'}
-            <SearchTagsSection bind:title={tagsTitle} parentPromise={tagsPromise} />
-          {:else if activeFilter === 'media'}
-            <SearchMediaSection />
+          {#each TAG_TABS as tab (tab.name)}
+            {#if activeFilter === tab.name}
+              <SearchTagsSection
+                bind:title={tagsTitle}
+                parentPromise={tagsPromise}
+                categoryNames={[tab.category]}
+                defaultCategory={tab.category}
+                showCategoryRow={false}
+              />
+            {/if}
+          {/each}
+          {#if activeFilter === 'tags'}
+            <SearchTagsSection
+              bind:title={tagsTitle}
+              parentPromise={tagsPromise}
+              categoryNames={REMAINING_CATEGORIES}
+              defaultCategory={null}
+            />
           {/if}
         </div>
       {/if}
@@ -239,6 +261,41 @@
         <div class="overflow-hidden">
           <div class="my-5 h-px w-full bg-light-200 dark:bg-dark-600"></div>
           <div class="px-5">
+            <div class="flex flex-wrap gap-2" data-advanced-filter-tabs>
+              {#each advancedFilters as item (item.name)}
+                <span class="contents" data-advanced-filter-tab={item.name}>
+                  <SearchButton
+                    active={advancedFilter === item.name || Boolean(item.activeTitle())}
+                    leadingIcon={item.icon}
+                    class={advancedFilter === item.name ? 'border-2' : undefined}
+                    onclick={() => (advancedFilter = advancedFilter === item.name ? undefined : item.name)}
+                  >
+                    {item.activeTitle() ?? item.title}
+                  </SearchButton>
+                </span>
+              {/each}
+            </div>
+            {#if advancedFilter === 'type'}
+              <div class="pt-5">
+                <SearchTextSection />
+              </div>
+            {:else if advancedFilter === 'people'}
+              <div class="pt-5">
+                <SearchPeopleSection bind:title={peopleTitle} parentPromise={peoplePromise} />
+              </div>
+            {:else if advancedFilter === 'date'}
+              <div class="pt-5">
+                <SearchDateSection />
+              </div>
+            {:else if advancedFilter === 'places'}
+              <div class="pt-5">
+                <SearchLocationSection />
+              </div>
+            {:else if advancedFilter === 'media'}
+              <div class="pt-5">
+                <SearchMediaSection />
+              </div>
+            {/if}
             <SearchCameraSection />
             {#if authManager.authenticated && authManager.preferences.ratings.enabled}
               <SearchRatingsSection />

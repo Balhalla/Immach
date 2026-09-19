@@ -157,4 +157,81 @@ describe('TagChipPicker', () => {
 
     expect([...selectedIds]).toEqual(['tag-1']);
   });
+
+  it('restricts the category row and chip grid to the given categories', () => {
+    const { container } = render(TagChipPicker, {
+      props: { allTags, selectedIds: new SvelteSet<string>(), categoryNames: ['Edition', 'Photographer'] },
+    });
+
+    const categories = [...container.querySelectorAll<HTMLElement>('[data-tag-category]')].map(
+      (node) => node.dataset.tagCategory,
+    );
+    expect(categories).toEqual(['all', 'Edition', 'Photographer']);
+    expect(chipValues(container)).toEqual(['BALHALLAFESTIVAL_2026', 'JOHAN_WIJCHEN']);
+  });
+
+  it('hides the category row and scopes the grid when requested', () => {
+    const { container } = render(TagChipPicker, {
+      props: {
+        allTags,
+        selectedIds: new SvelteSet<string>(),
+        categoryNames: ['Band & Workshop'],
+        defaultCategory: 'Band & Workshop',
+        showCategoryRow: false,
+      },
+    });
+
+    expect(container.querySelector('[data-tag-category-row]')).toBeNull();
+    expect(chipValues(container)).toEqual(['NARAGONIA_QUARTET', 'ROKKENDE_VROUWEN', 'WARMOES']);
+  });
+
+  it('searches only within the restricted categories', async () => {
+    const user = userEvent.setup();
+    const { container } = render(TagChipPicker, {
+      props: {
+        allTags,
+        selectedIds: new SvelteSet<string>(),
+        categoryNames: ['Edition'],
+        defaultCategory: 'Edition',
+        showCategoryRow: false,
+      },
+    });
+
+    await user.type(container.querySelector('[data-tag-chip-search]')!, 'johan');
+    expect(chipValues(container)).toEqual([]);
+
+    await user.clear(container.querySelector('[data-tag-chip-search]')!);
+    await user.type(container.querySelector('[data-tag-chip-search]')!, 'balhalla');
+    expect(chipValues(container)).toEqual(['BALHALLAFESTIVAL_2026']);
+  });
+
+  it('shows an empty state for a category without tags', () => {
+    const { container } = render(TagChipPicker, {
+      props: {
+        allTags,
+        selectedIds: new SvelteSet<string>(),
+        categoryNames: ['Organisation'],
+        defaultCategory: 'Organisation',
+        showCategoryRow: false,
+      },
+    });
+
+    expect(container.querySelector('[data-tag-picker-empty]')).not.toBeNull();
+    expect(chipValues(container)).toEqual([]);
+  });
+
+  it('keeps selected pills visible when they are outside the scoped categories', () => {
+    const { container } = render(TagChipPicker, {
+      props: {
+        allTags,
+        selectedIds: new SvelteSet(['tag-2']),
+        categoryNames: ['Edition'],
+        defaultCategory: 'Edition',
+        showCategoryRow: false,
+      },
+    });
+
+    expect(container.querySelector('[data-tag-selected="JOHAN_WIJCHEN"]')).not.toBeNull();
+    expect(chipValues(container)).toEqual(['BALHALLAFESTIVAL_2026']);
+  });
 });

@@ -15,6 +15,11 @@ export const TAG_CATEGORIES: TagCategory[] = [
     tags: ['BALAFOLK_2026', 'BALHALLAFESTIVAL_2026'],
   },
   {
+    name: 'Organisation',
+    color: '#c026d3',
+    tags: [],
+  },
+  {
     name: 'People & Appearance',
     color: '#e11d48',
     tags: [
@@ -116,7 +121,7 @@ export const TAG_CATEGORIES: TagCategory[] = [
     ],
   },
   {
-    name: 'Event Spaces & Environment',
+    name: 'Location',
     color: '#059669',
     tags: [
       'VIEW_FROM_STAGE',

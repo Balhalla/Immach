@@ -11,6 +11,8 @@
     allTags: TagResponseDto[];
     selectedIds: SvelteSet<string>;
     defaultCategory?: string | null;
+    categoryNames?: string[] | null;
+    showCategoryRow?: boolean;
     selectedVariant?: 'primary' | 'danger';
     allowCreate?: boolean;
     showMatchMode?: boolean;
@@ -26,6 +28,8 @@
     allTags,
     selectedIds,
     defaultCategory = null,
+    categoryNames = null,
+    showCategoryRow = true,
     selectedVariant = 'primary',
     allowCreate = false,
     showMatchMode = false,
@@ -49,13 +53,24 @@
   let canCreate = $derived(
     allowCreate && queryActive && allTags.every((tag) => tag.value.toLowerCase() !== trimmedQuery.toLowerCase()),
   );
-  let uncategorizedTags = $derived(allTags.filter((tag) => !categoryNameForTag(tag.value)));
+  let availableTags = $derived(
+    categoryNames
+      ? allTags.filter((tag) => {
+          const name = categoryNameForTag(tag.value);
+          return name !== undefined && categoryNames.includes(name);
+        })
+      : allTags,
+  );
+  let visibleCategories = $derived(
+    categoryNames ? TAG_CATEGORIES.filter((category) => categoryNames.includes(category.name)) : TAG_CATEGORIES,
+  );
+  let uncategorizedTags = $derived(availableTags.filter((tag) => !categoryNameForTag(tag.value)));
   let visibleTags = $derived(
     queryActive || selectedCategory === null
-      ? allTags
+      ? availableTags
       : selectedCategory === OTHER_CATEGORY
         ? uncategorizedTags
-        : allTags.filter((tag) => categoryNameForTag(tag.value) === selectedCategory),
+        : availableTags.filter((tag) => categoryNameForTag(tag.value) === selectedCategory),
   );
   let filteredTags = $derived(
     [...visibleTags]
@@ -188,47 +203,50 @@
     {/if}
   </div>
 
-  <div
-    class="flex gap-1 overflow-x-auto pb-1 transition-opacity {queryActive ? 'opacity-50' : ''}"
-    role="group"
-    aria-label={$t('category')}
-    data-tag-category-row
-  >
-    <button
-      type="button"
-      class={allChipClass(selectedCategory === null)}
-      aria-pressed={selectedCategory === null}
-      data-tag-category="all"
-      onclick={() => selectCategory(null)}
+  {#if showCategoryRow}
+    <div
+      class="flex gap-1 overflow-x-auto pb-1 transition-opacity {queryActive ? 'opacity-50' : ''}"
+      role="group"
+      aria-label={$t('category')}
+      data-tag-category-row
     >
-      {$t('all')}
-    </button>
-    {#each TAG_CATEGORIES as category (category.name)}
-      {@const active = selectedCategory === category.name}
       <button
         type="button"
-        class={categoryChipClass(active)}
-        style={active ? `background-color: ${category.color}` : undefined}
-        aria-pressed={active}
-        data-tag-category={category.name}
-        onclick={() => selectCategory(category.name)}
+        class={allChipClass(selectedCategory === null)}
+        aria-pressed={selectedCategory === null}
+        data-tag-category="all"
+        onclick={() => selectCategory(null)}
       >
-        <span class="size-2 shrink-0 rounded-full" style="background-color: {active ? '#fff' : category.color}"></span>
-        {category.name}
+        {$t('all')}
       </button>
-    {/each}
-    {#if uncategorizedTags.length > 0}
-      <button
-        type="button"
-        class={otherChipClass(selectedCategory === OTHER_CATEGORY)}
-        aria-pressed={selectedCategory === OTHER_CATEGORY}
-        data-tag-category="other"
-        onclick={() => selectCategory(OTHER_CATEGORY)}
-      >
-        {$t('other')}
-      </button>
-    {/if}
-  </div>
+      {#each visibleCategories as category (category.name)}
+        {@const active = selectedCategory === category.name}
+        <button
+          type="button"
+          class={categoryChipClass(active)}
+          style={active ? `background-color: ${category.color}` : undefined}
+          aria-pressed={active}
+          data-tag-category={category.name}
+          onclick={() => selectCategory(category.name)}
+        >
+          <span class="size-2 shrink-0 rounded-full" style="background-color: {active ? '#fff' : category.color}"
+          ></span>
+          {category.name}
+        </button>
+      {/each}
+      {#if uncategorizedTags.length > 0}
+        <button
+          type="button"
+          class={otherChipClass(selectedCategory === OTHER_CATEGORY)}
+          aria-pressed={selectedCategory === OTHER_CATEGORY}
+          data-tag-category="other"
+          onclick={() => selectCategory(OTHER_CATEGORY)}
+        >
+          {$t('other')}
+        </button>
+      {/if}
+    </div>
+  {/if}
 
   <div class="flex {maxHeightClass} flex-wrap content-start gap-1 overflow-y-auto" data-tag-chip-picker>
     {#if canCreate}
@@ -253,6 +271,9 @@
         {tag.value}
       </button>
     {/each}
+    {#if filteredTags.length === 0 && !queryActive && allTags.length > 0}
+      <p class="text-xs text-gray-400 dark:text-gray-500" data-tag-picker-empty>{$t('idb_no_tags_in_category')}</p>
+    {/if}
   </div>
 </section>
 
