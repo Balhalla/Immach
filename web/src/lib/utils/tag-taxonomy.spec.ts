@@ -53,4 +53,40 @@ describe('tag-taxonomy display order', () => {
     });
     expect(categoryNameForTag('BALHALLAFESTIVAL')).toBe('Organisation');
   });
+
+  it('carries the recategorization: Band_Type, slimmed Location, moved tags', () => {
+    expect(TAG_CATEGORIES.find((category) => category.name === 'Band_Type')).toMatchObject({
+      color: '#ca8a04',
+      tags: ['Band', 'DUO', 'TRIO', 'QUARTET', 'QUINTET', 'SEXTET', 'SCORES'],
+    });
+    expect(TAG_CATEGORIES.find((category) => category.name === 'Clothing & Accessories')?.tags).toEqual([
+      'DRESS',
+      'DRESS_SHIRT',
+      'TRANS_DRESS',
+      'T-SHIRT',
+      'KILT',
+      'TWINKLES',
+    ]);
+    expect(TAG_CATEGORIES.find((category) => category.name === 'Location')?.tags).toEqual([
+      'OPEN_STAGE',
+      'DANCEFLOOR',
+      'BAR',
+      'VOLUNTEER_AREA',
+      'BACKSTAGE',
+      'MAIN_STAGE',
+      'BUILDUP',
+      'TEARDOWN',
+      'WORKSHOP',
+      'VOLUNTEER_ACCOMODATION',
+      'SILENT_ROOM',
+      'PARTICIPANT_ACCOMODATION',
+    ]);
+    expect(categoryNameForTag('DRINK_BEER')).toBe('Relationships & Interaction');
+    expect(categoryNameForTag('FOOD')).toBe('Relationships & Interaction');
+    expect(categoryNameForTag('AUDIENCE')).toBe('Event Roles & People');
+    expect(categoryNameForTag('VIEW_FROM_STAGE')).toBe('Photography & Cinematography');
+    expect(categoryNameForTag('SKYLINE')).toBe('Objects & Merchandise');
+    expect(categoryNameForTag('SOFA')).toBe('Objects & Merchandise');
+    expect(categoryNameForTag('CHAIR')).toBe('Objects & Merchandise');
+  });
 });
