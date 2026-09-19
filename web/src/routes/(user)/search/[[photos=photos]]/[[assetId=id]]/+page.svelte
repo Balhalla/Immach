@@ -429,7 +429,7 @@
         </AssetSelectControlBar>
       </div>
     {:else}
-      <div class="fixed inset-s-0 top-0 z-2 w-full">
+      <div class="fixed inset-s-0 top-0 z-10 w-full">
         <ControlAppBar onClose={() => goto(previousRoute)} backIcon={mdiArrowLeft}>
           {#snippet trailing()}
             <TagFilterButton mode="merge" />
