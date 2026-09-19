@@ -10,29 +10,19 @@ describe('tag-taxonomy display order', () => {
   it('ranks photographers first, then editions, then everything else', () => {
     expect(tagDisplayRank('JOHAN_WIJCHEN')).toBe(0);
     expect(tagDisplayRank('HANNE_COLLETTE')).toBe(0);
-    expect(tagDisplayRank('BALHALLAFESTIVAL_2026')).toBe(1);
+    expect(tagDisplayRank('2026')).toBe(1);
+    expect(tagDisplayRank('2026_MAART')).toBe(1);
+    expect(tagDisplayRank('BALHALLAFESTIVAL')).toBe(2);
     expect(tagDisplayRank('NARAGONIA_QUARTET')).toBe(2);
     expect(tagDisplayRank('UNKNOWN_TAG')).toBe(2);
   });
 
   it('sorts photographer > edition > taxonomy order', () => {
-    const sorted = [
-      'NARAGONIA_QUARTET',
-      'SAX',
-      'BALHALLAFESTIVAL_2026',
-      'GABRIELE_SAVA',
-      'MOUSTACHE',
-      'JOHAN_WIJCHEN',
-    ].sort(compareTagDisplayOrder);
+    const sorted = ['NARAGONIA_QUARTET', 'SAX', '2026', 'GABRIELE_SAVA', 'MOUSTACHE', 'JOHAN_WIJCHEN'].sort(
+      compareTagDisplayOrder,
+    );
 
-    expect(sorted).toEqual([
-      'GABRIELE_SAVA',
-      'JOHAN_WIJCHEN',
-      'BALHALLAFESTIVAL_2026',
-      'MOUSTACHE',
-      'SAX',
-      'NARAGONIA_QUARTET',
-    ]);
+    expect(sorted).toEqual(['GABRIELE_SAVA', 'JOHAN_WIJCHEN', '2026', 'MOUSTACHE', 'SAX', 'NARAGONIA_QUARTET']);
   });
 
   it('keeps unknown tags after known tags, alphabetically', () => {
@@ -43,18 +33,24 @@ describe('tag-taxonomy display order', () => {
 
   it('maps known tags to their category color and unknown tags to undefined', () => {
     expect(categoryColorForTag('JOHAN_WIJCHEN')).toBe('#475569');
-    expect(categoryColorForTag('BALHALLAFESTIVAL_2026')).toBe('#7c2d12');
+    expect(categoryColorForTag('2026')).toBe('#7c2d12');
+    expect(categoryColorForTag('BALHALLAFESTIVAL')).toBe('#c026d3');
     expect(categoryColorForTag('NARAGONIA_QUARTET')).toBe('#4f46e5');
     expect(categoryColorForTag('UNKNOWN_TAG')).toBeUndefined();
   });
 
-  it('carries the renamed Location category and the new empty Organisation category', () => {
+  it('carries the renamed Location category, the Organisation tags and the Edition years', () => {
     expect(categoryNameForTag('MAIN_STAGE')).toBe('Location');
     expect(categoryColorForTag('MAIN_STAGE')).toBe('#059669');
     expect(TAG_CATEGORIES.some((category) => category.name === 'Event Spaces & Environment')).toBe(false);
+    expect(TAG_CATEGORIES.find((category) => category.name === 'Edition')).toMatchObject({
+      color: '#7c2d12',
+      tags: ['2026', '2026_MAART'],
+    });
     expect(TAG_CATEGORIES.find((category) => category.name === 'Organisation')).toMatchObject({
       color: '#c026d3',
-      tags: [],
+      tags: ['BALAFOLK', 'BALHALLA', 'BALHALLAFESTIVAL'],
     });
+    expect(categoryNameForTag('BALHALLAFESTIVAL')).toBe('Organisation');
   });
 });

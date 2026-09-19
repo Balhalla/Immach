@@ -14,12 +14,15 @@ const tag = (id: string, value: string): TagResponseDto => ({
 });
 
 const allTags = [
-  tag('tag-1', 'BALHALLAFESTIVAL_2026'),
+  tag('tag-1', '2026'),
   tag('tag-2', 'JOHAN_WIJCHEN'),
   tag('tag-3', 'NARAGONIA_QUARTET'),
   tag('tag-4', 'ROKKENDE_VROUWEN'),
   tag('tag-5', 'WARMOES'),
   tag('tag-6', 'holiday'),
+  tag('tag-7', 'BALAFOLK'),
+  tag('tag-8', 'BALHALLA'),
+  tag('tag-9', 'BALHALLAFESTIVAL'),
 ];
 
 const chipValues = (container: HTMLElement) =>
@@ -45,7 +48,7 @@ describe('TagChipPicker', () => {
       props: { allTags, selectedIds: new SvelteSet<string>(), defaultCategory: 'Edition' },
     });
 
-    expect(chipValues(container)).toEqual(['BALHALLAFESTIVAL_2026']);
+    expect(chipValues(container)).toEqual(['2026']);
 
     await user.click(screen.getByRole('button', { name: 'Band & Workshop' }));
     expect(chipValues(container)).toEqual(['NARAGONIA_QUARTET', 'ROKKENDE_VROUWEN', 'WARMOES']);
@@ -111,7 +114,7 @@ describe('TagChipPicker', () => {
     const selected = [...container.querySelectorAll<HTMLElement>('[data-tag-selected]')].map(
       (node) => node.dataset.tagSelected,
     );
-    expect(selected).toEqual(['JOHAN_WIJCHEN', 'BALHALLAFESTIVAL_2026', 'NARAGONIA_QUARTET']);
+    expect(selected).toEqual(['JOHAN_WIJCHEN', '2026', 'NARAGONIA_QUARTET']);
   });
 
   it('shows the match-mode toggle only when requested', async () => {
@@ -167,7 +170,7 @@ describe('TagChipPicker', () => {
       (node) => node.dataset.tagCategory,
     );
     expect(categories).toEqual(['all', 'Edition', 'Photographer']);
-    expect(chipValues(container)).toEqual(['BALHALLAFESTIVAL_2026', 'JOHAN_WIJCHEN']);
+    expect(chipValues(container)).toEqual(['2026', 'JOHAN_WIJCHEN']);
   });
 
   it('hides the category row and scopes the grid when requested', () => {
@@ -201,17 +204,32 @@ describe('TagChipPicker', () => {
     expect(chipValues(container)).toEqual([]);
 
     await user.clear(container.querySelector('[data-tag-chip-search]')!);
-    await user.type(container.querySelector('[data-tag-chip-search]')!, 'balhalla');
-    expect(chipValues(container)).toEqual(['BALHALLAFESTIVAL_2026']);
+    await user.type(container.querySelector('[data-tag-chip-search]')!, '2026');
+    expect(chipValues(container)).toEqual(['2026']);
   });
 
-  it('shows an empty state for a category without tags', () => {
+  it('lists the Organisation tags when scoped to that category', () => {
     const { container } = render(TagChipPicker, {
       props: {
         allTags,
         selectedIds: new SvelteSet<string>(),
         categoryNames: ['Organisation'],
         defaultCategory: 'Organisation',
+        showCategoryRow: false,
+      },
+    });
+
+    expect(container.querySelector('[data-tag-picker-empty]')).toBeNull();
+    expect(chipValues(container)).toEqual(['BALAFOLK', 'BALHALLA', 'BALHALLAFESTIVAL']);
+  });
+
+  it('shows an empty state for a category with no matching tags', () => {
+    const { container } = render(TagChipPicker, {
+      props: {
+        allTags,
+        selectedIds: new SvelteSet<string>(),
+        categoryNames: ['Location'],
+        defaultCategory: 'Location',
         showCategoryRow: false,
       },
     });
@@ -232,6 +250,6 @@ describe('TagChipPicker', () => {
     });
 
     expect(container.querySelector('[data-tag-selected="JOHAN_WIJCHEN"]')).not.toBeNull();
-    expect(chipValues(container)).toEqual(['BALHALLAFESTIVAL_2026']);
+    expect(chipValues(container)).toEqual(['2026']);
   });
 });

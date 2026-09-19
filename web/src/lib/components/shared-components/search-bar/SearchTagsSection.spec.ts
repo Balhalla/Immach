@@ -23,9 +23,12 @@ const allTags = [
   tag('tag-2', 'family'),
   tag('tag-3', 'NARAGONIA_QUARTET'),
   tag('tag-4', 'JOHAN_WIJCHEN'),
-  tag('tag-5', 'BALHALLAFESTIVAL_2026'),
+  tag('tag-5', '2026'),
   tag('tag-6', 'MOUSTACHE'),
   tag('tag-7', 'MAIN_STAGE'),
+  tag('tag-8', 'BALAFOLK'),
+  tag('tag-9', 'BALHALLA'),
+  tag('tag-10', 'BALHALLAFESTIVAL'),
 ];
 
 describe('SearchTagsSection component', () => {
@@ -88,7 +91,7 @@ describe('SearchTagsSection component', () => {
     const { container } = renderSection();
 
     expect(container.querySelector('[data-tag-category="Edition"]')?.getAttribute('aria-pressed')).toBe('true');
-    await screen.findByText('BALHALLAFESTIVAL_2026');
+    await screen.findByText('2026');
     expect(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET"]')).toBeNull();
   });
 
@@ -99,12 +102,12 @@ describe('SearchTagsSection component', () => {
     await user.type(container.querySelector('[data-tag-chip-search]')!, 'naragonia');
 
     expect(await screen.findByText('NARAGONIA_QUARTET')).toBeInTheDocument();
-    expect(container.querySelector('[data-tag-chip="BALHALLAFESTIVAL_2026"]')).toBeNull();
+    expect(container.querySelector('[data-tag-chip="2026"]')).toBeNull();
   });
 
   it('changes the match mode on the shared search filter', async () => {
     const { container } = renderSection();
-    await screen.findByText('BALHALLAFESTIVAL_2026');
+    await screen.findByText('2026');
 
     await fireEvent.click(container.querySelector('[data-tag-match="any"]')!);
 
@@ -115,13 +118,13 @@ describe('SearchTagsSection component', () => {
   it('sorts the selected pills photographer first', async () => {
     searchManager.setQuery({ tagIds: ['tag-3', 'tag-4', 'tag-5'] });
     const { container } = renderSection();
-    await screen.findAllByText('BALHALLAFESTIVAL_2026');
+    await screen.findAllByText('2026');
 
     const selected = [...container.querySelectorAll<HTMLElement>('[data-tag-selected]')].map(
       (node) => node.dataset.tagSelected,
     );
 
-    expect(selected).toEqual(['JOHAN_WIJCHEN', 'BALHALLAFESTIVAL_2026', 'NARAGONIA_QUARTET']);
+    expect(selected).toEqual(['JOHAN_WIJCHEN', '2026', 'NARAGONIA_QUARTET']);
   });
 
   it('scopes the picker to a single category without a category row', async () => {
@@ -137,17 +140,34 @@ describe('SearchTagsSection component', () => {
 
     await screen.findByText('JOHAN_WIJCHEN');
     expect(container.querySelector('[data-tag-category-row]')).toBeNull();
-    expect(container.querySelector('[data-tag-chip="BALHALLAFESTIVAL_2026"]')).toBeNull();
+    expect(container.querySelector('[data-tag-chip="2026"]')).toBeNull();
     expect(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET"]')).toBeNull();
   });
 
-  it('shows the empty state for a category without tags', async () => {
+  it('lists the Organisation tags when scoped to that category', async () => {
     const { container } = render(SearchTagsSection, {
       props: {
         title: undefined,
         parentPromise: Promise.resolve(allTags),
         categoryNames: ['Organisation'],
         defaultCategory: 'Organisation',
+        showCategoryRow: false,
+      },
+    });
+
+    await screen.findByText('BALAFOLK');
+    expect(container.querySelector('[data-tag-picker-empty]')).toBeNull();
+    expect(container.querySelector('[data-tag-chip="BALHALLA"]')).not.toBeNull();
+    expect(container.querySelector('[data-tag-chip="BALHALLAFESTIVAL"]')).not.toBeNull();
+  });
+
+  it('shows the empty state for a category with no matching tags', async () => {
+    const { container } = render(SearchTagsSection, {
+      props: {
+        title: undefined,
+        parentPromise: Promise.resolve(allTags),
+        categoryNames: ['Merch'],
+        defaultCategory: 'Merch',
         showCategoryRow: false,
       },
     });
@@ -187,7 +207,7 @@ describe('SearchTagsSection component', () => {
       },
     });
 
-    await screen.findByText('BALHALLAFESTIVAL_2026');
+    await screen.findByText('2026');
     expect(container.querySelector('[data-tag-selected="JOHAN_WIJCHEN"]')).not.toBeNull();
   });
 });

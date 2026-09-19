@@ -20,7 +20,7 @@ const tag = (id: string, value: string): TagResponseDto => ({
   updatedAt: '2026-01-01T00:00:00Z',
 });
 
-const allTags = [tag('tag-1', 'JOHAN_WIJCHEN'), tag('tag-2', 'BALHALLAFESTIVAL_2026')];
+const allTags = [tag('tag-1', 'JOHAN_WIJCHEN'), tag('tag-2', '2026')];
 
 describe('TagFilterPopover saved combinations', () => {
   beforeEach(() => {

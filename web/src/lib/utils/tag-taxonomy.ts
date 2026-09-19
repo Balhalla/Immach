@@ -12,12 +12,12 @@ export const TAG_CATEGORIES: TagCategory[] = [
   {
     name: 'Edition',
     color: '#7c2d12',
-    tags: ['BALAFOLK_2026', 'BALHALLAFESTIVAL_2026'],
+    tags: ['2026', '2026_MAART'],
   },
   {
     name: 'Organisation',
     color: '#c026d3',
-    tags: [],
+    tags: ['BALAFOLK', 'BALHALLA', 'BALHALLAFESTIVAL'],
   },
   {
     name: 'People & Appearance',

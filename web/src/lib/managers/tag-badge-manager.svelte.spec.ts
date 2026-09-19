@@ -21,7 +21,7 @@ describe('tagBadgeManager sorting', () => {
     sdkMock.getAllTags.mockResolvedValue([
       tag('t-animal', 'STUFFED_ANIMAL'),
       tag('t-band', 'NARAGONIA_QUARTET'),
-      tag('t-edition', 'BALHALLAFESTIVAL_2026'),
+      tag('t-edition', '2026'),
       tag('t-photo', 'JOHAN_WIJCHEN'),
       tag('t-people', 'MOUSTACHE'),
     ]);
@@ -39,7 +39,7 @@ describe('tagBadgeManager sorting', () => {
 
     expect(tagBadgeManager.tagsFor('a1').map((entry) => entry.value)).toEqual([
       'JOHAN_WIJCHEN',
-      'BALHALLAFESTIVAL_2026',
+      '2026',
       'MOUSTACHE',
       'STUFFED_ANIMAL',
       'NARAGONIA_QUARTET',

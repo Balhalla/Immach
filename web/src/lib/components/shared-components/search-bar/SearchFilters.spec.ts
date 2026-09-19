@@ -22,14 +22,17 @@ const tag = (id: string, value: string): TagResponseDto => ({
 });
 
 const allTags = [
-  tag('tag-1', 'BALHALLAFESTIVAL_2026'),
-  tag('tag-2', 'BALAFOLK_2026'),
+  tag('tag-1', '2026'),
+  tag('tag-2', '2026_MAART'),
   tag('tag-3', 'JOHAN_WIJCHEN'),
   tag('tag-4', 'GABRIELE_SAVA'),
   tag('tag-5', 'MAIN_STAGE'),
   tag('tag-6', 'NARAGONIA_QUARTET'),
   tag('tag-7', 'MOUSTACHE'),
   tag('tag-8', 'holiday'),
+  tag('tag-9', 'BALAFOLK'),
+  tag('tag-10', 'BALHALLA'),
+  tag('tag-11', 'BALHALLAFESTIVAL'),
 ];
 
 const DEDICATED_CATEGORIES = ['Photographer', 'Organisation', 'Edition', 'Location', 'Band & Workshop'];
@@ -109,8 +112,8 @@ describe('SearchFilters rev4 tag tabs', () => {
   it('defaults to the Edition tab and scopes the grid to edition tags without a category row', async () => {
     const { container } = renderFilters();
 
-    await waitFor(() => expect(container.querySelector('[data-tag-chip="BALHALLAFESTIVAL_2026"]')).not.toBeNull());
-    expect(container.querySelector('[data-tag-chip="BALAFOLK_2026"]')).not.toBeNull();
+    await waitFor(() => expect(container.querySelector('[data-tag-chip="2026"]')).not.toBeNull());
+    expect(container.querySelector('[data-tag-chip="2026_MAART"]')).not.toBeNull();
     expect(container.querySelector('[data-tag-chip="JOHAN_WIJCHEN"]')).toBeNull();
     expect(container.querySelector('[data-tag-category-row]')).toBeNull();
   });
@@ -123,7 +126,7 @@ describe('SearchFilters rev4 tag tabs', () => {
 
     await waitFor(() => expect(container.querySelector('[data-tag-chip="JOHAN_WIJCHEN"]')).not.toBeNull());
     expect(container.querySelector('[data-tag-chip="GABRIELE_SAVA"]')).not.toBeNull();
-    expect(container.querySelector('[data-tag-chip="BALHALLAFESTIVAL_2026"]')).toBeNull();
+    expect(container.querySelector('[data-tag-chip="2026"]')).toBeNull();
     expect(container.querySelector('[data-tag-category-row]')).toBeNull();
   });
 
@@ -148,14 +151,17 @@ describe('SearchFilters rev4 tag tabs', () => {
     expect(container.querySelector('[data-tag-chip="JOHAN_WIJCHEN"]')).toBeNull();
   });
 
-  it('shows the empty state on the Organisation tab', async () => {
+  it('lists the Organisation tags on the Organisation tab', async () => {
     const user = userEvent.setup();
     const { container } = renderFilters();
 
     await user.click(clickTab(container, 'organisation'));
 
-    await waitFor(() => expect(container.querySelector('[data-tag-picker-empty]')).not.toBeNull());
-    expect(container.querySelector('[data-tag-chip]')).toBeNull();
+    await waitFor(() => expect(container.querySelector('[data-tag-chip="BALAFOLK"]')).not.toBeNull());
+    expect(container.querySelector('[data-tag-picker-empty]')).toBeNull();
+    expect(container.querySelector('[data-tag-chip="BALHALLA"]')).not.toBeNull();
+    expect(container.querySelector('[data-tag-chip="BALHALLAFESTIVAL"]')).not.toBeNull();
+    expect(container.querySelector('[data-tag-chip="2026"]')).toBeNull();
   });
 
   it('restricts the Tags tab to the remaining categories only', async () => {
@@ -174,20 +180,20 @@ describe('SearchFilters rev4 tag tabs', () => {
     );
     expect(container.querySelector('[data-tag-chip="MOUSTACHE"]')).not.toBeNull();
     expect(container.querySelector('[data-tag-chip="JOHAN_WIJCHEN"]')).toBeNull();
-    expect(container.querySelector('[data-tag-chip="BALHALLAFESTIVAL_2026"]')).toBeNull();
+    expect(container.querySelector('[data-tag-chip="2026"]')).toBeNull();
   });
 
   it('keeps pinned selections across tab switches and shares the match mode', async () => {
     const user = userEvent.setup();
     const { container } = renderFilters();
 
-    await waitFor(() => expect(container.querySelector('[data-tag-chip="BALHALLAFESTIVAL_2026"]')).not.toBeNull());
-    await user.click(container.querySelector('[data-tag-chip="BALHALLAFESTIVAL_2026"]')!);
+    await waitFor(() => expect(container.querySelector('[data-tag-chip="2026"]')).not.toBeNull());
+    await user.click(container.querySelector('[data-tag-chip="2026"]')!);
     await user.click(clickTab(container, 'photographer'));
     await waitFor(() => expect(container.querySelector('[data-tag-chip="JOHAN_WIJCHEN"]')).not.toBeNull());
     await user.click(container.querySelector('[data-tag-chip="JOHAN_WIJCHEN"]')!);
 
-    expect(container.querySelector('[data-tag-selected="BALHALLAFESTIVAL_2026"]')).not.toBeNull();
+    expect(container.querySelector('[data-tag-selected="2026"]')).not.toBeNull();
     expect(container.querySelector('[data-tag-selected="JOHAN_WIJCHEN"]')).not.toBeNull();
     expect([...(searchManager.filter.tagIds ?? [])].sort()).toEqual(['tag-1', 'tag-3']);
     expect(container.querySelector('[data-tag-match]')).not.toBeNull();
