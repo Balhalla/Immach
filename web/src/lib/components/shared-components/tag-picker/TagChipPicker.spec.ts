@@ -5,6 +5,17 @@ import userEvent from '@testing-library/user-event';
 import { SvelteSet } from 'svelte/reactivity';
 import TagChipPicker from '$lib/components/shared-components/tag-picker/TagChipPicker.svelte';
 
+// A future-edition workshop tag that the taxonomy will know once 2027 exists; the
+// picker derives its year chips from taxonomy-known tags, so map it here.
+vi.mock('$lib/utils/tag-taxonomy', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('$lib/utils/tag-taxonomy')>();
+  return {
+    ...actual,
+    categoryNameForTag: (tag: string) =>
+      tag === 'WORKSHOP_HILDE_SINGING_2027' ? 'Band & Workshop' : actual.categoryNameForTag(tag),
+  };
+});
+
 const tag = (id: string, value: string): TagResponseDto => ({
   id,
   name: value,
@@ -16,13 +27,15 @@ const tag = (id: string, value: string): TagResponseDto => ({
 const allTags = [
   tag('tag-1', '2026'),
   tag('tag-2', 'JOHAN_WIJCHEN'),
-  tag('tag-3', 'NARAGONIA_QUARTET'),
-  tag('tag-4', 'ROKKENDE_VROUWEN'),
-  tag('tag-5', 'WARMOES'),
+  tag('tag-3', 'NARAGONIA_QUARTET_2026'),
+  tag('tag-4', 'ROKKENDE_VROUWEN_2026'),
+  tag('tag-5', 'WARMOES_2026'),
   tag('tag-6', 'holiday'),
   tag('tag-7', 'BALAFOLK'),
   tag('tag-8', 'BALHALLA'),
   tag('tag-9', 'BALHALLAFESTIVAL'),
+  tag('tag-10', 'WORKSHOP_BRETON_DANCES_2026'),
+  tag('tag-11', 'WORKSHOP_HILDE_SINGING_2027'),
 ];
 
 const chipValues = (container: HTMLElement) =>
@@ -51,7 +64,7 @@ describe('TagChipPicker', () => {
     expect(chipValues(container)).toEqual(['2026']);
 
     await user.click(screen.getByRole('button', { name: 'Band & Workshop' }));
-    expect(chipValues(container)).toEqual(['NARAGONIA_QUARTET', 'ROKKENDE_VROUWEN', 'WARMOES']);
+    expect(chipValues(container)).toEqual(['NARAGONIA_QUARTET_2026', 'ROKKENDE_VROUWEN_2026', 'WARMOES_2026']);
   });
 
   it('searches across all categories regardless of the active category', async () => {
@@ -62,15 +75,15 @@ describe('TagChipPicker', () => {
 
     await user.type(container.querySelector('[data-tag-chip-search]')!, 'nara');
 
-    expect(chipValues(container)).toEqual(['NARAGONIA_QUARTET']);
+    expect(chipValues(container)).toEqual(['NARAGONIA_QUARTET_2026']);
   });
 
   it('selects a contiguous range on shift-click', async () => {
     const selectedIds = new SvelteSet<string>();
     const { container } = render(TagChipPicker, { props: { allTags, selectedIds } });
 
-    await fireEvent.click(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET"]')!);
-    await fireEvent.click(container.querySelector('[data-tag-chip="WARMOES"]')!, { shiftKey: true });
+    await fireEvent.click(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET_2026"]')!);
+    await fireEvent.click(container.querySelector('[data-tag-chip="WARMOES_2026"]')!, { shiftKey: true });
 
     expect([...selectedIds]).toEqual(['tag-3', 'tag-4', 'tag-5']);
   });
@@ -114,7 +127,7 @@ describe('TagChipPicker', () => {
     const selected = [...container.querySelectorAll<HTMLElement>('[data-tag-selected]')].map(
       (node) => node.dataset.tagSelected,
     );
-    expect(selected).toEqual(['JOHAN_WIJCHEN', '2026', 'NARAGONIA_QUARTET']);
+    expect(selected).toEqual(['JOHAN_WIJCHEN', '2026', 'NARAGONIA_QUARTET_2026']);
   });
 
   it('shows the match-mode toggle only when requested', async () => {
@@ -185,7 +198,47 @@ describe('TagChipPicker', () => {
     });
 
     expect(container.querySelector('[data-tag-category-row]')).toBeNull();
-    expect(chipValues(container)).toEqual(['NARAGONIA_QUARTET', 'ROKKENDE_VROUWEN', 'WARMOES']);
+    expect(chipValues(container)).toEqual(['NARAGONIA_QUARTET_2026', 'ROKKENDE_VROUWEN_2026', 'WARMOES_2026']);
+  });
+
+  it('scopes Band & Workshop to the latest year of the selected kind by default', async () => {
+    const user = userEvent.setup();
+    const { container } = render(TagChipPicker, {
+      props: {
+        allTags,
+        selectedIds: new SvelteSet<string>(),
+        defaultCategory: 'Band & Workshop',
+        showCategoryRow: false,
+      },
+    });
+
+    expect(container.querySelector('[data-tag-bw-filters]')).not.toBeNull();
+    expect(chipValues(container)).toEqual(['NARAGONIA_QUARTET_2026', 'ROKKENDE_VROUWEN_2026', 'WARMOES_2026']);
+
+    await user.click(container.querySelector('[data-tag-bw-kind="workshop"]')!);
+    expect(chipValues(container)).toEqual(['WORKSHOP_HILDE_SINGING_2027']);
+
+    await user.click(container.querySelector('[data-tag-bw-year="2026"]')!);
+    expect(chipValues(container)).toEqual(['WORKSHOP_BRETON_DANCES_2026']);
+
+    await user.click(container.querySelector('[data-tag-bw-year="all"]')!);
+    expect(chipValues(container)).toEqual(['WORKSHOP_BRETON_DANCES_2026', 'WORKSHOP_HILDE_SINGING_2027']);
+
+    await user.click(container.querySelector('[data-tag-bw-kind="band"]')!);
+    expect(chipValues(container)).toEqual(['NARAGONIA_QUARTET_2026', 'ROKKENDE_VROUWEN_2026', 'WARMOES_2026']);
+  });
+
+  it('hides the Band & Workshop sub-filters outside that category', () => {
+    const { container } = render(TagChipPicker, {
+      props: {
+        allTags,
+        selectedIds: new SvelteSet<string>(),
+        defaultCategory: 'Edition',
+        showCategoryRow: false,
+      },
+    });
+
+    expect(container.querySelector('[data-tag-bw-filters]')).toBeNull();
   });
 
   it('searches only within the restricted categories', async () => {

@@ -20,7 +20,7 @@ describe('tagBadgeManager sorting', () => {
   beforeEach(() => {
     sdkMock.getAllTags.mockResolvedValue([
       tag('t-animal', 'STUFFED_ANIMAL'),
-      tag('t-band', 'NARAGONIA_QUARTET'),
+      tag('t-band', 'NARAGONIA_QUARTET_2026'),
       tag('t-edition', '2026'),
       tag('t-photo', 'JOHAN_WIJCHEN'),
       tag('t-people', 'MOUSTACHE'),
@@ -42,7 +42,7 @@ describe('tagBadgeManager sorting', () => {
       '2026',
       'MOUSTACHE',
       'STUFFED_ANIMAL',
-      'NARAGONIA_QUARTET',
+      'NARAGONIA_QUARTET_2026',
     ]);
   });
 });

@@ -13,16 +13,16 @@ describe('tag-taxonomy display order', () => {
     expect(tagDisplayRank('2026')).toBe(1);
     expect(tagDisplayRank('2026_MAART')).toBe(1);
     expect(tagDisplayRank('BALHALLAFESTIVAL')).toBe(2);
-    expect(tagDisplayRank('NARAGONIA_QUARTET')).toBe(2);
+    expect(tagDisplayRank('NARAGONIA_QUARTET_2026')).toBe(2);
     expect(tagDisplayRank('UNKNOWN_TAG')).toBe(2);
   });
 
   it('sorts photographer > edition > taxonomy order', () => {
-    const sorted = ['NARAGONIA_QUARTET', 'SAX', '2026', 'GABRIELE_SAVA', 'MOUSTACHE', 'JOHAN_WIJCHEN'].sort(
+    const sorted = ['NARAGONIA_QUARTET_2026', 'SAX', '2026', 'GABRIELE_SAVA', 'MOUSTACHE', 'JOHAN_WIJCHEN'].sort(
       compareTagDisplayOrder,
     );
 
-    expect(sorted).toEqual(['GABRIELE_SAVA', 'JOHAN_WIJCHEN', '2026', 'MOUSTACHE', 'SAX', 'NARAGONIA_QUARTET']);
+    expect(sorted).toEqual(['GABRIELE_SAVA', 'JOHAN_WIJCHEN', '2026', 'MOUSTACHE', 'SAX', 'NARAGONIA_QUARTET_2026']);
   });
 
   it('keeps unknown tags after known tags, alphabetically', () => {
@@ -35,7 +35,7 @@ describe('tag-taxonomy display order', () => {
     expect(categoryColorForTag('JOHAN_WIJCHEN')).toBe('#475569');
     expect(categoryColorForTag('2026')).toBe('#7c2d12');
     expect(categoryColorForTag('BALHALLAFESTIVAL')).toBe('#c026d3');
-    expect(categoryColorForTag('NARAGONIA_QUARTET')).toBe('#4f46e5');
+    expect(categoryColorForTag('NARAGONIA_QUARTET_2026')).toBe('#4f46e5');
     expect(categoryColorForTag('UNKNOWN_TAG')).toBeUndefined();
   });
 

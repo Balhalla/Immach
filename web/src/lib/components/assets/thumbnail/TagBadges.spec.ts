@@ -19,7 +19,7 @@ const tag = (id: string, value: string, color?: string): TagResponseDto => ({
 const tags = [
   tag('t-photo', 'JOHAN_WIJCHEN', '#475569'),
   tag('t-edition', '2026', '#7c2d12'),
-  tag('t-band', 'NARAGONIA_QUARTET', '#4f46e5'),
+  tag('t-band', 'NARAGONIA_QUARTET_2026', '#4f46e5'),
   tag('t-people', 'MOUSTACHE'),
 ];
 
@@ -48,7 +48,7 @@ describe('TagBadges', () => {
 
     expect(
       [...container.querySelectorAll<HTMLElement>('[data-tag-badge]')].map((node) => node.dataset.tagBadge),
-    ).toEqual(['JOHAN_WIJCHEN', '2026', 'NARAGONIA_QUARTET']);
+    ).toEqual(['JOHAN_WIJCHEN', '2026', 'NARAGONIA_QUARTET_2026']);
     expect(container.querySelector('[data-tag-badge-count]')?.textContent?.trim()).toBe('+1');
   });
 
@@ -62,7 +62,7 @@ describe('TagBadges', () => {
     await tick();
 
     expect(document.querySelector('[data-tag-badge-popover]')).not.toBeNull();
-    expect(popoverItems()).toEqual(['JOHAN_WIJCHEN', '2026', 'NARAGONIA_QUARTET', 'MOUSTACHE']);
+    expect(popoverItems()).toEqual(['JOHAN_WIJCHEN', '2026', 'NARAGONIA_QUARTET_2026', 'MOUSTACHE']);
     expect(document.querySelector('[data-tag-badge-popover-item="JOHAN_WIJCHEN"]')).toHaveStyle({
       backgroundColor: '#475569',
     });

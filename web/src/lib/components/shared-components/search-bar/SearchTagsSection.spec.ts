@@ -21,7 +21,7 @@ const tag = (id: string, value: string): TagResponseDto => ({
 const allTags = [
   tag('tag-1', 'holiday'),
   tag('tag-2', 'family'),
-  tag('tag-3', 'NARAGONIA_QUARTET'),
+  tag('tag-3', 'NARAGONIA_QUARTET_2026'),
   tag('tag-4', 'JOHAN_WIJCHEN'),
   tag('tag-5', '2026'),
   tag('tag-6', 'MOUSTACHE'),
@@ -81,10 +81,10 @@ describe('SearchTagsSection component', () => {
     const { container } = renderSection();
 
     await user.click(screen.getByRole('button', { name: 'Band & Workshop' }));
-    await user.click(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET"]')!);
+    await user.click(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET_2026"]')!);
 
     expect([...(searchManager.filter.tagIds ?? [])]).toEqual(['tag-1', 'tag-2', 'tag-3']);
-    expect(container.querySelector('[data-tag-selected="NARAGONIA_QUARTET"]')).not.toBeNull();
+    expect(container.querySelector('[data-tag-selected="NARAGONIA_QUARTET_2026"]')).not.toBeNull();
   });
 
   it('defaults to the Edition category and filters the grid to it', async () => {
@@ -92,7 +92,7 @@ describe('SearchTagsSection component', () => {
 
     expect(container.querySelector('[data-tag-category="Edition"]')?.getAttribute('aria-pressed')).toBe('true');
     await screen.findByText('2026');
-    expect(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET"]')).toBeNull();
+    expect(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET_2026"]')).toBeNull();
   });
 
   it('searches across all categories', async () => {
@@ -101,7 +101,7 @@ describe('SearchTagsSection component', () => {
 
     await user.type(container.querySelector('[data-tag-chip-search]')!, 'naragonia');
 
-    expect(await screen.findByText('NARAGONIA_QUARTET')).toBeInTheDocument();
+    expect(await screen.findByText('NARAGONIA_QUARTET_2026')).toBeInTheDocument();
     expect(container.querySelector('[data-tag-chip="2026"]')).toBeNull();
   });
 
@@ -124,7 +124,7 @@ describe('SearchTagsSection component', () => {
       (node) => node.dataset.tagSelected,
     );
 
-    expect(selected).toEqual(['JOHAN_WIJCHEN', '2026', 'NARAGONIA_QUARTET']);
+    expect(selected).toEqual(['JOHAN_WIJCHEN', '2026', 'NARAGONIA_QUARTET_2026']);
   });
 
   it('scopes the picker to a single category without a category row', async () => {
@@ -141,7 +141,7 @@ describe('SearchTagsSection component', () => {
     await screen.findByText('JOHAN_WIJCHEN');
     expect(container.querySelector('[data-tag-category-row]')).toBeNull();
     expect(container.querySelector('[data-tag-chip="2026"]')).toBeNull();
-    expect(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET"]')).toBeNull();
+    expect(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET_2026"]')).toBeNull();
   });
 
   it('lists the Organisation tags when scoped to that category', async () => {
@@ -185,7 +185,7 @@ describe('SearchTagsSection component', () => {
       },
     });
 
-    await screen.findByText('NARAGONIA_QUARTET');
+    await screen.findByText('NARAGONIA_QUARTET_2026');
     const categories = [...container.querySelectorAll<HTMLElement>('[data-tag-category]')].map(
       (node) => node.dataset.tagCategory,
     );

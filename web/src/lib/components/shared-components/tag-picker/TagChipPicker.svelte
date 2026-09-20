@@ -42,12 +42,19 @@
   }: Props = $props();
 
   const OTHER_CATEGORY = '__other__';
+  const BAND_WORKSHOP_CATEGORY = 'Band & Workshop';
+  const YEAR_SUFFIX = /_(\d{4})$/;
+  const bandWorkshopKinds: Array<'band' | 'workshop'> = ['band', 'workshop'];
+  const bandWorkshopKind = (value: string) => (value.startsWith('WORKSHOP_') ? 'workshop' : 'band');
+  const tagYear = (value: string) => YEAR_SUFFIX.exec(value)?.[1] ?? null;
   const matchModes: TagMatchMode[] = ['all', 'any', 'none'];
 
   let tagMap = $derived(Object.fromEntries(allTags.map((tag) => [tag.id, tag])));
   let query = $state('');
   let selectedCategory = $state<string | null>(defaultCategory);
   let lastToggledIndex = $state(-1);
+  let bandWorkshopFilterKind = $state<'band' | 'workshop'>('band');
+  let bandWorkshopYearChoice = $state<string | null>(null);
   let trimmedQuery = $derived(query.trim());
   let queryActive = $derived(trimmedQuery.length > 0);
   let canCreate = $derived(
@@ -72,8 +79,41 @@
         ? uncategorizedTags
         : availableTags.filter((tag) => categoryNameForTag(tag.value) === selectedCategory),
   );
+  let bandWorkshopActive = $derived(selectedCategory === BAND_WORKSHOP_CATEGORY);
+  let bandWorkshopTags = $derived(
+    availableTags.filter((tag) => categoryNameForTag(tag.value) === BAND_WORKSHOP_CATEGORY),
+  );
+  let bandWorkshopYears = $derived(
+    [
+      ...new Set(
+        bandWorkshopTags
+          .filter((tag) => bandWorkshopKind(tag.value) === bandWorkshopFilterKind)
+          .map((tag) => tagYear(tag.value)),
+      ),
+    ]
+      .filter((year): year is string => year !== null)
+      .sort()
+      .reverse(),
+  );
+  let bandWorkshopYear = $derived(
+    bandWorkshopYearChoice === 'all'
+      ? 'all'
+      : bandWorkshopYearChoice && bandWorkshopYears.includes(bandWorkshopYearChoice)
+        ? bandWorkshopYearChoice
+        : (bandWorkshopYears[0] ?? 'all'),
+  );
+  let scopedTags = $derived(
+    bandWorkshopActive
+      ? visibleTags.filter(
+          (tag) =>
+            categoryNameForTag(tag.value) !== BAND_WORKSHOP_CATEGORY ||
+            (bandWorkshopKind(tag.value) === bandWorkshopFilterKind &&
+              (bandWorkshopYear === 'all' || tagYear(tag.value) === bandWorkshopYear)),
+        )
+      : visibleTags,
+  );
   let filteredTags = $derived(
-    [...visibleTags]
+    [...scopedTags]
       .filter((tag) => tag.value.toLowerCase().includes(trimmedQuery.toLowerCase()))
       .sort((a, b) => compareTagOrder(a.value, b.value)),
   );
@@ -87,6 +127,16 @@
   const selectCategory = (name: string | null) => {
     selectedCategory = name;
     query = '';
+    lastToggledIndex = -1;
+  };
+
+  const setBandWorkshopKind = (kind: 'band' | 'workshop') => {
+    bandWorkshopFilterKind = kind;
+    lastToggledIndex = -1;
+  };
+
+  const setBandWorkshopYear = (year: string) => {
+    bandWorkshopYearChoice = year;
     lastToggledIndex = -1;
   };
 
@@ -163,6 +213,11 @@
 
   const matchModeClass = (active: boolean) =>
     `flex-1 rounded-md px-2 py-0.5 text-xs whitespace-nowrap transition-colors ${
+      active ? 'bg-primary text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+    }`;
+
+  const bandWorkshopKindClass = (active: boolean) =>
+    `rounded-md px-3 py-0.5 text-xs whitespace-nowrap transition-colors ${
       active ? 'bg-primary text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
     }`;
 </script>
@@ -244,6 +299,48 @@
         >
           {$t('other')}
         </button>
+      {/if}
+    </div>
+  {/if}
+
+  {#if bandWorkshopActive && bandWorkshopTags.length > 0}
+    <div class="flex flex-wrap items-center gap-2" data-tag-bw-filters>
+      <div class="flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800" role="group" aria-label="Band & Workshop">
+        {#each bandWorkshopKinds as kind (kind)}
+          <button
+            type="button"
+            class={bandWorkshopKindClass(bandWorkshopFilterKind === kind)}
+            aria-pressed={bandWorkshopFilterKind === kind}
+            data-tag-bw-kind={kind}
+            onclick={() => setBandWorkshopKind(kind)}
+          >
+            {kind === 'band' ? $t('idb_bands') : $t('idb_workshops')}
+          </button>
+        {/each}
+      </div>
+      {#if bandWorkshopYears.length > 0}
+        <div class="flex gap-1" role="group" aria-label={$t('idb_all_years')}>
+          <button
+            type="button"
+            class={allChipClass(bandWorkshopYear === 'all')}
+            aria-pressed={bandWorkshopYear === 'all'}
+            data-tag-bw-year="all"
+            onclick={() => setBandWorkshopYear('all')}
+          >
+            {$t('idb_all_years')}
+          </button>
+          {#each bandWorkshopYears as year (year)}
+            <button
+              type="button"
+              class={allChipClass(bandWorkshopYear === year)}
+              aria-pressed={bandWorkshopYear === year}
+              data-tag-bw-year={year}
+              onclick={() => setBandWorkshopYear(year)}
+            >
+              {year}
+            </button>
+          {/each}
+        </div>
       {/if}
     </div>
   {/if}

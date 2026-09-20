@@ -27,7 +27,7 @@ const allTags = [
   tag('tag-3', 'JOHAN_WIJCHEN'),
   tag('tag-4', 'GABRIELE_SAVA'),
   tag('tag-5', 'MAIN_STAGE'),
-  tag('tag-6', 'NARAGONIA_QUARTET'),
+  tag('tag-6', 'NARAGONIA_QUARTET_2026'),
   tag('tag-7', 'MOUSTACHE'),
   tag('tag-8', 'holiday'),
   tag('tag-9', 'BALAFOLK'),
@@ -147,7 +147,7 @@ describe('SearchFilters rev4 tag tabs', () => {
 
     await user.click(clickTab(container, 'band'));
 
-    await waitFor(() => expect(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET"]')).not.toBeNull());
+    await waitFor(() => expect(container.querySelector('[data-tag-chip="NARAGONIA_QUARTET_2026"]')).not.toBeNull());
     expect(container.querySelector('[data-tag-chip="JOHAN_WIJCHEN"]')).toBeNull();
   });
 
