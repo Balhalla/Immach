@@ -397,7 +397,7 @@ describe(AssetService.name, () => {
       const asset1 = AssetFactory.from().owner(auth.user).build();
       const asset2 = AssetFactory.from().owner(auth.user).build();
       mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([asset1.id, asset2.id]));
-      mocks.asset.getByIds.mockResolvedValue([asset1, asset2])
+      mocks.asset.getByIds.mockResolvedValue([asset1, asset2]);
 
       await sut.updateAll(auth, { ids: [asset1.id, asset2.id], visibility: AssetVisibility.Archive });
 

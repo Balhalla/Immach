@@ -88,6 +88,7 @@ import { mockEnvData } from 'test/repositories/config.repository.mock.js';
 import { newTelemetryRepositoryMock } from 'test/repositories/telemetry.repository.mock.js';
 import { factory, newDate, newEmbedding, newUuid } from 'test/small.factory.js';
 import { automock, wait } from 'test/utils.js';
+import { WebsocketRepository } from 'src/repositories/websocket.repository.js';
 
 export const testAssetsDir = resolve(import.meta.dirname, '../../e2e/test-assets');
 
@@ -614,6 +615,10 @@ const newMockRepository = <T>(key: ClassConstructor<T>) => {
 
     case StorageRepository: {
       return automock(StorageRepository, { args: [{ setContext: () => {} }] });
+    }
+
+    case WebsocketRepository: {
+      return automock(WebsocketRepository, { args: [undefined, { setContext: () => {} }] });
     }
 
     default: {
