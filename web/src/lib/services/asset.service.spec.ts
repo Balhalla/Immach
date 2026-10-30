@@ -32,6 +32,11 @@ vitest.mock('$lib/utils/idb-drive-overrides', () => ({
   ensureDriveIdOverridesLoaded: vitest.fn(),
 }));
 
+vitest.mock('$lib/utils/idb-account', () => ({
+  ensureAccountLoaded: vitest.fn(),
+  getCachedAuthuser: vitest.fn(() => ''),
+}));
+
 vitest.mock('$lib/utils/i18n', () => ({
   getFormatter: vitest.fn(),
   getPreferredLocale: vitest.fn(),

@@ -25,6 +25,7 @@
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { searchManager } from '$lib/managers/search-manager.svelte';
   import type { Viewport } from '$lib/managers/timeline-manager/types';
+  import OriginalsPlanModal from '$lib/modals/OriginalsPlanModal.svelte';
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
   import { lang, locale } from '$lib/stores/preferences.store';
@@ -46,8 +47,15 @@
     searchSmart,
     type SmartSearchDto,
   } from '@immich/sdk';
-  import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton, LoadingSpinner } from '@immich/ui';
-  import { mdiArrowLeft, mdiClose, mdiDotsVertical, mdiImageOffOutline, mdiSelectAll } from '@mdi/js';
+  import {
+    ActionButton,
+    CommandPaletteDefaultProvider,
+    Icon,
+    IconButton,
+    LoadingSpinner,
+    modalManager,
+  } from '@immich/ui';
+  import { mdiArrowLeft, mdiClose, mdiDotsVertical, mdiDownload, mdiImageOffOutline, mdiSelectAll } from '@mdi/js';
   import { tick, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
 
@@ -276,6 +284,10 @@
     searchManager.setQuery(terms);
   }
 
+  const openOriginalsPlan = async () => {
+    await modalManager.show(OriginalsPlanModal, { terms, immichUrl: location.origin });
+  };
+
   $effect(() => {
     // keep the global search filter in sync with the URL so the tag filter button
     // edits the selection that is actually being shown
@@ -432,6 +444,18 @@
       <div class="fixed inset-s-0 top-0 z-10 w-full">
         <ControlAppBar onClose={() => goto(previousRoute)} backIcon={mdiArrowLeft}>
           {#snippet trailing()}
+            {#if searchTermKeys.length > 0}
+              <IconButton
+                shape="round"
+                color="secondary"
+                variant="ghost"
+                aria-label={$t('idb_download_originals')}
+                title={$t('idb_download_originals')}
+                icon={mdiDownload}
+                data-idb-originals-open
+                onclick={openOriginalsPlan}
+              />
+            {/if}
             <TagFilterButton mode="merge" />
           {/snippet}
           <div class="mx-auto w-full max-w-2xl pe-2">

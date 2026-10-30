@@ -11,3 +11,6 @@ node_modules
 # ImmichDriveBridge tools/fork/sync-variants.ps1; see that script for the rebuild loop)
 /static/idb-variants.json
 /static/idb-drive-overrides.json
+
+# generated Drive account pin (authuser) written from .env.local DRIVE_ACCOUNT_EMAIL
+/static/idb-account.json

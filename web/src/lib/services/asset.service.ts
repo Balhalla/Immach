@@ -57,6 +57,7 @@ import { downloadUrl } from '$lib/utils';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
 import { buildDownloadUrl, buildViewUrl, resolveDriveId, resolveDriveIdWithOverrides } from '$lib/utils/idb-drive';
+import { ensureAccountLoaded } from '$lib/utils/idb-account';
 import { ensureDriveIdOverridesLoaded } from '$lib/utils/idb-drive-overrides';
 import { getVariantDownloadChoice, getVariantEntry } from '$lib/utils/idb-variants';
 
@@ -112,6 +113,8 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
   const driveId = resolveDriveId(asset);
   // Warm the authoritative override map; action handlers below await the full resolution.
   void ensureDriveIdOverridesLoaded();
+  // Warm the Drive account pin so link builders emit authuser before the first download/view.
+  void ensureAccountLoaded();
 
   const Share: ActionItem = {
     title: $t('share'),
@@ -152,6 +155,7 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
         return;
       }
 
+      await ensureAccountLoaded();
       const entry = await getVariantEntry(resolvedDriveId);
       window.open(buildViewUrl(entry?.cleanDriveId ?? resolvedDriveId), '_blank');
     },
@@ -358,6 +362,7 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
 };
 
 const handleDriveDownload = async (driveId: string) => {
+  await ensureAccountLoaded();
   const choice = await getVariantDownloadChoice(driveId);
   if (!choice?.watermarkDriveId) {
     window.open(buildDownloadUrl(choice?.cleanDriveId ?? driveId), '_blank');

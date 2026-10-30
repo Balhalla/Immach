@@ -121,6 +121,18 @@ describe('idb-drive', () => {
       );
     });
 
+    it('pins the account via authuser on the view url when provided', () => {
+      expect(buildViewUrl(ID, 'michael.coene@balhalla.be')).toBe(
+        `https://drive.google.com/file/d/${ID}/view?authuser=michael.coene%40balhalla.be`,
+      );
+    });
+
+    it('pins the account via authuser on the download url when provided', () => {
+      expect(buildDownloadUrl(ID, 'michael.coene@balhalla.be')).toBe(
+        `https://drive.usercontent.google.com/download?id=${ID}&export=download&confirm=t&authuser=michael.coene%40balhalla.be`,
+      );
+    });
+
     it('builds the Drive thumbnail url', () => {
       expect(buildImageUrl(ID)).toBe(`https://drive.google.com/thumbnail?id=${ID}&sz=w1000`);
     });

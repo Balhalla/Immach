@@ -1,3 +1,4 @@
+import { getCachedAuthuser } from '$lib/utils/idb-account';
 import { getDriveIdOverride } from '$lib/utils/idb-drive-overrides';
 
 const DRIVE_ID_PATTERN = /^[A-Za-z0-9_-]{20,}$/;
@@ -65,10 +66,18 @@ export const buildImageUrl = (driveId: string): string => {
   return `https://drive.google.com/thumbnail?id=${driveId}&sz=w1000`;
 };
 
-export const buildViewUrl = (driveId: string): string => {
-  return `https://drive.google.com/file/d/${driveId}/view`;
+export const buildViewUrl = (driveId: string, authuser: string = getCachedAuthuser()): string => {
+  let url = `https://drive.google.com/file/d/${driveId}/view`;
+  if (authuser) {
+    url += `?authuser=${encodeURIComponent(authuser)}`;
+  }
+  return url;
 };
 
-export const buildDownloadUrl = (driveId: string): string => {
-  return `https://drive.usercontent.google.com/download?id=${driveId}&export=download&confirm=t`;
+export const buildDownloadUrl = (driveId: string, authuser: string = getCachedAuthuser()): string => {
+  let url = `https://drive.usercontent.google.com/download?id=${driveId}&export=download&confirm=t`;
+  if (authuser) {
+    url += `&authuser=${encodeURIComponent(authuser)}`;
+  }
+  return url;
 };
